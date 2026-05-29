@@ -1,19 +1,24 @@
 {
   "name": "catalogo_pwa",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
-  "devDependencies": {
-    "typescript": "~6.0.2",
-    "vite": "^8.0.12"
-  },
   "dependencies": {
-    "dexie": "^4.4.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "dexie": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.5.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.3.5",
     "vite-plugin-pwa": "^1.3.0"
   }
 }
