@@ -35,6 +35,8 @@ jobs:
 
       - name: Build PWA
         run: npm run build
+        env:
+          VITE_GITHUB_IMG_TOKEN: ${{ secrets.VITE_GITHUB_IMG_TOKEN }}
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v4
