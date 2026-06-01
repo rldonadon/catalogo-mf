@@ -1084,9 +1084,14 @@ export default function App() {
     setTela('busca'); setProdutoCodigo('')
   }, [])
 
-  // Sincronização inicial
+  // Sincronização e verificação de cadastro inicial
   useEffect(() => {
-    precisaAtualizar().then(async precisa => {
+    async function init() {
+      const cadastrado = await isCadastrado()
+      if (!cadastrado) {
+        setTela('cadastro')
+      }
+      const precisa = await precisaAtualizar()
       if (precisa) {
         setShowSincBanner(true)
         try {
@@ -1098,7 +1103,8 @@ export default function App() {
         }
       }
       setLoading(false)
-    })
+    }
+    init()
   }, [])
 
   const telas_com_header: Tela[] = ['busca','figura','favoritos','orcamento','info']

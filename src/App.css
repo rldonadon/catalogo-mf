@@ -544,6 +544,15 @@ body {
 }
 
 @media (min-width: 640px) {
-  .app { max-width: 480px; margin: 0 auto; }
-  .drawer-overlay { display: none; }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    box-shadow: 0 0 30px rgba(15, 23, 42, 0.05);
+  }
+  .drawer-overlay, .drawer, .tab-bar, .produto-footer, .modal-overlay, .zoom-overlay, .sinc-banner {
+    position: absolute;
+  }
 }
