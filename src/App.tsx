@@ -76,13 +76,26 @@ function ProdutoCard({ p, onClick }: { p: Produto; onClick: () => void }) {
 // ═══════════════════════════════════════════════════════════
 //  TELA: BUSCA
 // ═══════════════════════════════════════════════════════════
-function TelaBusca({ navigate, isStandalone, instalarPWA }: { navigate: (t: Tela, p?: string) => void; isStandalone: boolean; instalarPWA: () => void }) {
+function TelaBusca({ navigate, instalarPWA }: { navigate: (t: Tela, p?: string) => void; instalarPWA: () => void }) {
   const [aba, setAba] = useState<AbaHome>('busca')
   const [termo, setTermo] = useState('')
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [marcas, setMarcas] = useState<string[]>([])
   const [grupos, setGrupos] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [showInstallBanner, setShowInstallBanner] = useState(false)
+
+  useEffect(() => {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
+    const closed = localStorage.getItem('mf_hide_install_banner') === 'true'
+    setShowInstallBanner(!standalone && !closed)
+  }, [])
+
+  const fecharInstallBanner = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    localStorage.setItem('mf_hide_install_banner', 'true')
+    setShowInstallBanner(false)
+  }
   const debounce = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
@@ -141,14 +154,14 @@ function TelaBusca({ navigate, isStandalone, instalarPWA }: { navigate: (t: Tela
             <div className="welcome-area">
               <img src={BASE_BANNER} alt="MF Banner" className="welcome-banner" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
               
-              {!isStandalone && (
+              {showInstallBanner && (
                 <div className="install-banner-card" onClick={instalarPWA}>
                   <span className="install-banner-icon">📥</span>
                   <div className="install-banner-text">
                     <strong>Instalar Aplicativo</strong>
                     <p>Adicione o catálogo à tela de início para acesso rápido e offline.</p>
                   </div>
-                  <span className="install-banner-arrow">›</span>
+                  <button className="install-close-btn" onClick={fecharInstallBanner} title="Fechar">✕</button>
                 </div>
               )}
 
@@ -1120,16 +1133,10 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [showSincBanner, setShowSincBanner] = useState(false)
   const [exibirHeaderGlobal, setExibirHeaderGlobal] = useState(true)
-  const [isStandalone, setIsStandalone] = useState(true)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('mf_theme')
     return (saved === 'dark' || saved === 'light') ? saved : 'light'
   })
-
-  useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
-    setIsStandalone(!!standalone)
-  }, [])
 
   useEffect(() => {
     setExibirHeaderGlobal(true)
@@ -1245,7 +1252,7 @@ export default function App() {
 
       {/* Conteúdo */}
       <main className="app-content">
-        {tela === 'busca'      && <TelaBusca navigate={navigate} isStandalone={isStandalone} instalarPWA={instalarPWA} />}
+        {tela === 'busca'      && <TelaBusca navigate={navigate} instalarPWA={instalarPWA} />}
         {tela === 'figura'     && <TelaFigura navigate={navigate} onSubnivelChange={setExibirHeaderGlobal} />}
         {tela === 'favoritos'  && <TelaFavoritos navigate={navigate} />}
         {tela === 'orcamento'  && <TelaOrcamento />}
