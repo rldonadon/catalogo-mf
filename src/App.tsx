@@ -462,7 +462,7 @@ function TelaInfo() {
 // ═══════════════════════════════════════════════════════════
 //  TELA: DETALHE DO PRODUTO
 // ═══════════════════════════════════════════════════════════
-function TelaProduto({ codigo, onVoltar }: { codigo: string; onVoltar: () => void }) {
+function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate: (t: Tela, p?: string) => void; onVoltar: () => void }) {
   const [produto, setProduto] = useState<Produto | null>(null)
   const [imgUrls, setImgUrls] = useState<{ reparo?: string; valvula?: string }>({})
   const [reparo, setReparo] = useState('')
@@ -586,7 +586,7 @@ function TelaProduto({ codigo, onVoltar }: { codigo: string; onVoltar: () => voi
             <h3>⛓️ Relacionados</h3>
             <div className="relacionados-scroll">
               {relacionados.map(r => (
-                <div key={r.codigo} className="rel-card">
+                <div key={r.codigo} className="rel-card" onClick={() => navigate('produto', r.codigo)} role="button">
                   <ImagemProduto codigo={r.codigo} size={50} />
                   <span className="rel-codigo">{r.codigo}</span>
                   <span className="rel-nome">{r.nome}</span>
@@ -952,8 +952,9 @@ function TelaIdioma({ onVoltar }: { onVoltar: () => void }) {
 // ═══════════════════════════════════════════════════════════
 //  COMPONENTE: DRAWER
 // ═══════════════════════════════════════════════════════════
-function Drawer({ isOpen, onClose, navigate }: {
-  isOpen: boolean; onClose: () => void; navigate: (t: Tela) => void
+function Drawer({ isOpen, onClose, navigate, theme, toggleTheme }: {
+  isOpen: boolean; onClose: () => void; navigate: (t: Tela) => void;
+  theme: 'light' | 'dark'; toggleTheme: () => void;
 }) {
   const [fontScale, setFontScale] = useState(() => parseFloat(localStorage.getItem('mf_font_scale') || '1'))
   const [fontModal, setFontModal] = useState(false)
@@ -983,6 +984,7 @@ function Drawer({ isOpen, onClose, navigate }: {
     { icon: '👤', label: t('menu.meu_cadastro'), action: () => goTo('cadastro') },
     { icon: '📞', label: t('menu.contato'), action: () => goTo('contato') },
     { icon: '🏢', label: t('menu.sobre_quinelato'), action: () => goTo('sobre') },
+    { icon: '🌓', label: theme === 'dark' ? 'Tema Claro' : 'Tema Escuro', action: () => { onClose(); toggleTheme(); } },
     { icon: '🔄', label: t('menu.verificar_atualizacoes'), action: () => { onClose(); alert('Verificando atualizações… reabra o app ou puxe para recarregar.') } },
     { icon: '📤', label: t('menu.compartilhar_app'), action: compartilharApp },
     { icon: '🔒', label: t('menu.politica_privacidade'), action: () => goTo('politica') },
@@ -1054,6 +1056,19 @@ export default function App() {
   const [sincOk, setSincOk] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showSincBanner, setShowSincBanner] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('mf_theme')
+    return (saved === 'dark' || saved === 'light') ? saved : 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('mf_theme', theme)
+  }, [theme])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => t === 'dark' ? 'light' : 'dark')
+  }, [])
 
   const ABAS: { id: Tela; icon: string }[] = [
     { id: 'busca', icon: '🔍' }, { id: 'figura', icon: '🚛' },
@@ -1121,7 +1136,7 @@ export default function App() {
         </div>
       )}
 
-      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} navigate={navigate} />
+      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} navigate={navigate} theme={theme} toggleTheme={toggleTheme} />
 
       {/* Conteúdo */}
       <main className="app-content">
@@ -1130,7 +1145,7 @@ export default function App() {
         {tela === 'favoritos'  && <TelaFavoritos navigate={navigate} />}
         {tela === 'orcamento'  && <TelaOrcamento />}
         {tela === 'info'       && <TelaInfo />}
-        {tela === 'produto'    && <TelaProduto codigo={produtoCodigo} onVoltar={voltar} />}
+        {tela === 'produto'    && <TelaProduto codigo={produtoCodigo} navigate={navigate} onVoltar={voltar} />}
         {tela === 'cadastro'   && <TelaCadastro onVoltar={voltar} />}
         {tela === 'contato'    && <TelaContato onVoltar={voltar} />}
         {tela === 'sobre'      && <TelaSobre onVoltar={voltar} />}
