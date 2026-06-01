@@ -80,7 +80,19 @@ footer{text-align:center;padding:20px;font-size:12px;color:#6b7a99}
 <body>
 
 <div class="hero">
-  <img src="../logo.png" class="hero-logo" alt="MF Freios" onerror="this.style.display='none'">
+  <img id="logo-img" class="hero-logo" alt="MF Freios" style="display:none;" onerror="this.style.display='none'">
+  <script>
+    (function() {
+      let basePath = '/';
+      const pathParts = window.location.pathname.split('/');
+      if (pathParts.length > 1 && pathParts[1] === 'catalogo-mf') {
+        basePath = '/catalogo-mf/';
+      }
+      const img = document.getElementById('logo-img');
+      img.src = basePath + 'logo.png';
+      img.style.display = 'inline-block';
+    })();
+  </script>
   <div class="hero-title">Instale o Catálogo MF<br>no seu iPhone</div>
   <div class="hero-sub">Funciona como um app — sem precisar da App Store</div>
 </div>

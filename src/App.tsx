@@ -6,6 +6,9 @@ import { carregarImagemPrivada, buscarImagensProduto, buscarImagemFigura } from 
 import { t, getIdioma, setIdioma, type Idioma } from './i18n'
 import { WHATSAPP_NUMS, TELEFONES, EMAILS_CONTATO, ENDERECO, SISTEMAS_FIGURA, WEBHOOK_URL } from './config'
 
+const BASE_LOGO = `${import.meta.env.BASE_URL}logo.png`
+const BASE_BANNER = `${import.meta.env.BASE_URL}caminhao_banner.png`
+
 // ═══════════════════════════════════════════════════════════
 //  TYPES
 // ═══════════════════════════════════════════════════════════
@@ -73,7 +76,7 @@ function ProdutoCard({ p, onClick }: { p: Produto; onClick: () => void }) {
 // ═══════════════════════════════════════════════════════════
 //  TELA: BUSCA
 // ═══════════════════════════════════════════════════════════
-function TelaBusca({ navigate }: { navigate: (t: Tela, p?: string) => void }) {
+function TelaBusca({ navigate, isStandalone, instalarPWA }: { navigate: (t: Tela, p?: string) => void; isStandalone: boolean; instalarPWA: () => void }) {
   const [aba, setAba] = useState<AbaHome>('busca')
   const [termo, setTermo] = useState('')
   const [produtos, setProdutos] = useState<Produto[]>([])
@@ -136,8 +139,20 @@ function TelaBusca({ navigate }: { navigate: (t: Tela, p?: string) => void }) {
 
           {!loading && !termo && (
             <div className="welcome-area">
+              <img src={BASE_BANNER} alt="MF Banner" className="welcome-banner" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
+              
+              {!isStandalone && (
+                <div className="install-banner-card" onClick={instalarPWA}>
+                  <span className="install-banner-icon">📥</span>
+                  <div className="install-banner-text">
+                    <strong>Instalar Aplicativo</strong>
+                    <p>Adicione o catálogo à tela de início para acesso rápido e offline.</p>
+                  </div>
+                  <span className="install-banner-arrow">›</span>
+                </div>
+              )}
+
               <div className="welcome-card">
-                <div className="welcome-icon">🔧</div>
                 <h2>{t('busca.bem_vindo_titulo')}</h2>
                 <p>{t('busca.bem_vindo_desc')}</p>
               </div>
@@ -190,13 +205,17 @@ function TelaBusca({ navigate }: { navigate: (t: Tela, p?: string) => void }) {
 //  TELA: POR FIGURA
 // ═══════════════════════════════════════════════════════════
 type FiguraNivel = 'sistemas' | 'grupos' | 'marcas' | 'produtos'
-function TelaFigura({ navigate }: { navigate: (t: Tela, p?: string) => void }) {
+function TelaFigura({ navigate, onSubnivelChange }: { navigate: (t: Tela, p?: string) => void; onSubnivelChange: (sub: boolean) => void }) {
   const [nivel, setNivel] = useState<FiguraNivel>('sistemas')
   const [sistema, setSistema] = useState<typeof SISTEMAS_FIGURA[0] | null>(null)
   const [grupo, setGrupo] = useState('')
   const [marcas, setMarcas] = useState<string[]>([])
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    onSubnivelChange(nivel !== 'sistemas')
+  }, [nivel, onSubnivelChange])
 
   const selSistema = (s: typeof SISTEMAS_FIGURA[0]) => { setSistema(s); setNivel('grupos') }
 
@@ -216,11 +235,15 @@ function TelaFigura({ navigate }: { navigate: (t: Tela, p?: string) => void }) {
 
   return (
     <div className="tela">
-      {/* Breadcrumb */}
+      {/* Header unificado para navegação por figuras */}
       {nivel !== 'sistemas' && (
-        <button className="btn-voltar" onClick={() => setNivel(
-          nivel === 'grupos' ? 'sistemas' : nivel === 'marcas' ? 'grupos' : 'marcas'
-        )}>← Voltar</button>
+        <header className="app-header" style={{ position: 'sticky', top: 0, zIndex: 10, margin: '0 -14px 12px' }}>
+          <button className="hamburger" onClick={() => setNivel(
+            nivel === 'grupos' ? 'sistemas' : nivel === 'marcas' ? 'grupos' : 'marcas'
+          )} aria-label="Voltar">←</button>
+          <span className="header-title">{nivel === 'grupos' ? sistema?.label : nivel === 'marcas' ? grupo : 'Produtos'}</span>
+          <div style={{ width: 40 }} />
+        </header>
       )}
 
       {nivel === 'sistemas' && (
@@ -426,12 +449,20 @@ const INFO_ITEMS = [
   { id: 4, titulo: 'Suspensão Pneumática – Nivelamento', data: '05/12/2023', resumo: 'Ajuste de niveladoras em suspensões pneumáticas de ônibus e carretas.' },
 ]
 
-function TelaInfo() {
+function TelaInfo({ onSubnivelChange }: { onSubnivelChange: (sub: boolean) => void }) {
   const [detalhe, setDetalhe] = useState<typeof INFO_ITEMS[0] | null>(null)
+
+  useEffect(() => {
+    onSubnivelChange(detalhe !== null)
+  }, [detalhe, onSubnivelChange])
 
   if (detalhe) return (
     <div className="tela">
-      <button className="btn-voltar" onClick={() => setDetalhe(null)}>← Voltar</button>
+      <header className="app-header" style={{ position: 'sticky', top: 0, zIndex: 10, margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={() => setDetalhe(null)} aria-label="Voltar">←</button>
+        <span className="header-title">Informativos</span>
+        <div style={{ width: 40 }} />
+      </header>
       <div className="info-detalhe">
         <small className="info-data">{detalhe.data}</small>
         <h2>{detalhe.titulo}</h2>
@@ -518,13 +549,15 @@ function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate:
 
   return (
     <div className="tela-produto">
-      {/* Header */}
-      <div className="produto-header">
-        <button className="btn-voltar-inline" onClick={onVoltar}>← Voltar</button>
-        <span className="badge-cyan">{produto.codigo}</span>
-        <button className={`btn-icon ${isFav ? 'fav-ativo' : ''}`} onClick={toggleFav} title="Favorito">⭐</button>
-        <button className="btn-icon" onClick={compartilhar} title="Compartilhar">📤</button>
-      </div>
+      {/* Header unificado na barra de cima */}
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        <span className="header-title-code">{produto.codigo}</span>
+        <div className="header-actions">
+          <button className={`btn-icon ${isFav ? 'fav-ativo' : ''}`} onClick={toggleFav} title="Favorito">⭐</button>
+          <button className="btn-icon" onClick={compartilhar} title="Compartilhar">📤</button>
+        </div>
+      </header>
 
       {/* Imagens */}
       <div className="imgs-area">
@@ -698,8 +731,16 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
   }
 
   return (
-    <div className="tela tela-cadastro">
-      {isEdit && <button className="btn-voltar" onClick={onVoltar}>✕ Fechar</button>}
+    <div className="tela tela-cadastro" style={{ paddingTop: 0 }}>
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        {isEdit ? (
+          <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        ) : (
+          <div style={{ width: 40 }} />
+        )}
+        <span className="header-title">{isEdit ? 'Meu Cadastro' : 'Cadastro'}</span>
+        <div style={{ width: 40 }} />
+      </header>
 
       {etapa === 'idioma' && (
         <div className="cadastro-etapa">
@@ -763,9 +804,12 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
 // ═══════════════════════════════════════════════════════════
 function TelaContato({ onVoltar }: { onVoltar: () => void }) {
   return (
-    <div className="tela">
-      <button className="btn-voltar" onClick={onVoltar}>← Voltar</button>
-      <h2 className="sec-titulo">📞 Contato</h2>
+    <div className="tela" style={{ paddingTop: 0 }}>
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        <span className="header-title">Contato</span>
+        <div style={{ width: 40 }} />
+      </header>
 
       <div className="contato-card">
         <h3>💬 WhatsApp Vendas</h3>
@@ -814,10 +858,14 @@ function TelaContato({ onVoltar }: { onVoltar: () => void }) {
 // ═══════════════════════════════════════════════════════════
 function TelaSobre({ onVoltar }: { onVoltar: () => void }) {
   return (
-    <div className="tela">
-      <button className="btn-voltar" onClick={onVoltar}>← Voltar</button>
+    <div className="tela" style={{ paddingTop: 0 }}>
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        <span className="header-title">Sobre a MF Freios</span>
+        <div style={{ width: 40 }} />
+      </header>
       <div className="sobre-logo-card">
-        <img src="/catalogo-mf/logo.png" alt="MF Logo" className="sobre-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
+        <img src={BASE_LOGO} alt="MF Logo" className="sobre-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
         <strong>MF SISTEMAS AUTOMOTIVOS</strong>
         <span>Catálogo Digital • Versão 7.0.0</span>
       </div>
@@ -852,9 +900,12 @@ function TelaLancamentos({ navigate, onVoltar }: { navigate: (t: Tela, p?: strin
   }, [])
 
   return (
-    <div className="tela">
-      <button className="btn-voltar" onClick={onVoltar}>← Voltar</button>
-      <h2 className="sec-titulo">🚀 Lançamentos</h2>
+    <div className="tela" style={{ paddingTop: 0 }}>
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        <span className="header-title">Lançamentos</span>
+        <div style={{ width: 40 }} />
+      </header>
       <div className="welcome-card" style={{ marginBottom: 16 }}>
         <p>Confira as últimas novidades e novos reparos inseridos no catálogo comercial da MF Freios.</p>
       </div>
@@ -881,8 +932,12 @@ function TelaMensagens({ onVoltar }: { onVoltar: () => void }) {
   const iconeCat = (c: string) => c === 'lancamento' ? '🚀' : c === 'promo' ? '📢' : '⚙️'
 
   return (
-    <div className="tela">
-      <button className="btn-voltar" onClick={onVoltar}>← Voltar</button>
+    <div className="tela" style={{ paddingTop: 0 }}>
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        <span className="header-title">Central de Mensagens</span>
+        <div style={{ width: 40 }} />
+      </header>
       <div className="orcamento-header">
         <h2>💬 Central de Mensagens</h2>
         {msgs.length > 0 && <button className="btn-danger-sm" onClick={limpar}>Limpar</button>}
@@ -908,9 +963,12 @@ function TelaMensagens({ onVoltar }: { onVoltar: () => void }) {
 // ═══════════════════════════════════════════════════════════
 function TelaPolitica({ onVoltar }: { onVoltar: () => void }) {
   return (
-    <div className="tela">
-      <button className="btn-voltar" onClick={onVoltar}>← Voltar</button>
-      <h2 className="sec-titulo">🔒 Política de Privacidade</h2>
+    <div className="tela" style={{ paddingTop: 0 }}>
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        <span className="header-title">Política de Privacidade</span>
+        <div style={{ width: 40 }} />
+      </header>
       <div className="politica-full">
         <h3>1. Coleta de Informações</h3><p>Coletamos dados de cadastro (nome, CNPJ/CPF, telefone, cidade, estado, e-mail) para identificar acessos legítimos de clientes, mecânicos e distribuidores autorizados.</p>
         <h3>2. Finalidade do Tratamento</h3><ul><li>Identificar clientes autorizados</li><li>Sincronizar cotações e orçamentos</li><li>Enviar notificações de novos produtos</li></ul>
@@ -934,9 +992,13 @@ function TelaIdioma({ onVoltar }: { onVoltar: () => void }) {
     onVoltar()
   }
   return (
-    <div className="tela">
-      <button className="btn-voltar" onClick={onVoltar}>← Voltar</button>
-      <h2 className="sec-titulo">🌐 Selecione o Idioma</h2>
+    <div className="tela" style={{ paddingTop: 0 }}>
+      <header className="app-header" style={{ margin: '0 -14px 12px' }}>
+        <button className="hamburger" onClick={onVoltar} aria-label="Voltar">←</button>
+        <span className="header-title">Alterar Idioma</span>
+        <div style={{ width: 40 }} />
+      </header>
+      <h2 className="sec-titulo" style={{ display: 'none' }}>🌐 Selecione o Idioma</h2>
       <p>Escolha o seu idioma de preferência.</p>
       {([['PT','🇧🇷','Português','Brasil (BR)'],['ES','🇪🇸','Español','España (ES)'],['EN','🇺🇸','English','United States (US)']] as const).map(([l,flag,nome,pais]) => (
         <button key={l} className={`idioma-card${atual===l?' ativo':''}`} onClick={() => selecionar(l as Idioma)}>
@@ -952,9 +1014,9 @@ function TelaIdioma({ onVoltar }: { onVoltar: () => void }) {
 // ═══════════════════════════════════════════════════════════
 //  COMPONENTE: DRAWER
 // ═══════════════════════════════════════════════════════════
-function Drawer({ isOpen, onClose, navigate, theme, toggleTheme }: {
+function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA }: {
   isOpen: boolean; onClose: () => void; navigate: (t: Tela) => void;
-  theme: 'light' | 'dark'; toggleTheme: () => void;
+  theme: 'light' | 'dark'; toggleTheme: () => void; instalarPWA: () => void;
 }) {
   const [fontScale, setFontScale] = useState(() => parseFloat(localStorage.getItem('mf_font_scale') || '1'))
   const [fontModal, setFontModal] = useState(false)
@@ -985,6 +1047,7 @@ function Drawer({ isOpen, onClose, navigate, theme, toggleTheme }: {
     { icon: '📞', label: t('menu.contato'), action: () => goTo('contato') },
     { icon: '🏢', label: t('menu.sobre_quinelato'), action: () => goTo('sobre') },
     { icon: '🌓', label: theme === 'dark' ? 'Tema Claro' : 'Tema Escuro', action: () => { onClose(); toggleTheme(); } },
+    { icon: '📥', label: 'Instalar Aplicativo', action: () => { onClose(); instalarPWA(); } },
     { icon: '🔄', label: t('menu.verificar_atualizacoes'), action: () => { onClose(); alert('Verificando atualizações… reabra o app ou puxe para recarregar.') } },
     { icon: '📤', label: t('menu.compartilhar_app'), action: compartilharApp },
     { icon: '🔒', label: t('menu.politica_privacidade'), action: () => goTo('politica') },
@@ -1000,7 +1063,7 @@ function Drawer({ isOpen, onClose, navigate, theme, toggleTheme }: {
       {/* Drawer */}
       <div className={`drawer${isOpen?' open':''}`}>
         <div className="drawer-header">
-          <img src="/catalogo-mf/logo.png" alt="MF Logo" className="drawer-logo"
+          <img src={BASE_LOGO} alt="MF Logo" className="drawer-logo"
                onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
           <span className="drawer-subtitle">Catálogo Digital MF</span>
         </div>
@@ -1056,10 +1119,21 @@ export default function App() {
   const [sincOk, setSincOk] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showSincBanner, setShowSincBanner] = useState(false)
+  const [exibirHeaderGlobal, setExibirHeaderGlobal] = useState(true)
+  const [isStandalone, setIsStandalone] = useState(true)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('mf_theme')
     return (saved === 'dark' || saved === 'light') ? saved : 'light'
   })
+
+  useEffect(() => {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
+    setIsStandalone(!!standalone)
+  }, [])
+
+  useEffect(() => {
+    setExibirHeaderGlobal(true)
+  }, [tela])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -1069,6 +1143,31 @@ export default function App() {
   const toggleTheme = useCallback(() => {
     setTheme(t => t === 'dark' ? 'light' : 'dark')
   }, [])
+
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    }
+  }, [])
+
+  const instalarPWA = useCallback(async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null)
+      }
+    } else {
+      window.open(`${import.meta.env.BASE_URL}instalar/`, '_blank')
+    }
+  }, [deferredPrompt])
 
   const ABAS: { id: Tela; icon: string }[] = [
     { id: 'busca', icon: '🔍' }, { id: 'figura', icon: '🚛' },
@@ -1112,7 +1211,7 @@ export default function App() {
 
   if (loading) return (
     <div className="splash">
-      <img src="/catalogo-mf/logo.png" alt="MF" className="splash-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
+      <img src={BASE_LOGO} alt="MF" className="splash-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
       <div className="spinner" /><p>Carregando catálogo…</p>
     </div>
   )
@@ -1120,10 +1219,10 @@ export default function App() {
   return (
     <div className="app">
       {/* Header global (apenas abas principais) */}
-      {isAbaPrincipal && (
+      {isAbaPrincipal && exibirHeaderGlobal && (
         <header className="app-header">
           <button className="hamburger" onClick={() => setDrawerOpen(true)} aria-label="Menu">☰</button>
-          <img src="/catalogo-mf/logo.png" alt="MF" className="header-logo"
+          <img src={BASE_LOGO} alt="MF" className="header-logo"
                onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
           <div style={{ width: 40 }} />
         </header>
@@ -1142,15 +1241,15 @@ export default function App() {
         </div>
       )}
 
-      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} navigate={navigate} theme={theme} toggleTheme={toggleTheme} />
+      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} navigate={navigate} theme={theme} toggleTheme={toggleTheme} instalarPWA={instalarPWA} />
 
       {/* Conteúdo */}
       <main className="app-content">
-        {tela === 'busca'      && <TelaBusca navigate={navigate} />}
-        {tela === 'figura'     && <TelaFigura navigate={navigate} />}
+        {tela === 'busca'      && <TelaBusca navigate={navigate} isStandalone={isStandalone} instalarPWA={instalarPWA} />}
+        {tela === 'figura'     && <TelaFigura navigate={navigate} onSubnivelChange={setExibirHeaderGlobal} />}
         {tela === 'favoritos'  && <TelaFavoritos navigate={navigate} />}
         {tela === 'orcamento'  && <TelaOrcamento />}
-        {tela === 'info'       && <TelaInfo />}
+        {tela === 'info'       && <TelaInfo onSubnivelChange={setExibirHeaderGlobal} />}
         {tela === 'produto'    && <TelaProduto codigo={produtoCodigo} navigate={navigate} onVoltar={voltar} />}
         {tela === 'cadastro'   && <TelaCadastro onVoltar={voltar} />}
         {tela === 'contato'    && <TelaContato onVoltar={voltar} />}
