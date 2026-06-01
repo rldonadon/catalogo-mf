@@ -4,16 +4,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --cyan:        #00d4e8;
-  --cyan-dim:    #00d4e815;
-  --cyan-dark:   #00b8c8;
-  --bg:          #0d0f12;
-  --bg-card:     #13171c;
-  --bg-panel:    #1a1f26;
-  --border:      #1e2530;
-  --text-1:      #f0f2f5;
-  --text-2:      #8a95a3;
-  --text-muted:  #4a5568;
+  --cyan:        #0284c7; /* Azul oceano sofisticado do app original */
+  --cyan-dim:    rgba(2, 132, 199, 0.08);
+  --cyan-dark:   #025a87;
+  --bg:          #f8fafc; /* Fundo cinza gelo do app original */
+  --bg-card:     #ffffff; /* Fundo de cartões branco */
+  --bg-panel:    #f1f5f9; /* Fundo de painéis e inputs */
+  --border:      rgba(15, 23, 42, 0.08); /* Borda muito suave e limpa */
+  --text-1:      #0f172a; /* Slate 900 para máxima legibilidade */
+  --text-2:      #475569; /* Slate 600 para descrições */
+  --text-muted:  #94a3b8; /* Slate 400 para detalhes */
   --danger:      #ef4444;
   --green:       #10b981;
   --blue:        #2563eb;
@@ -21,7 +21,7 @@
   --header-h:    56px;
   --radius:      10px;
   --radius-sm:   6px;
-  --shadow:      0 2px 12px #0006;
+  --shadow:      0 2px 12px rgba(15, 23, 42, 0.05); /* Sombra leve para tema claro */
 }
 
 html { font-size: 16px; scroll-behavior: smooth; }
@@ -74,7 +74,7 @@ body {
   height: var(--tab-h); background: var(--bg-card);
   border-top: 1px solid var(--border);
   display: flex; align-items: stretch; z-index: 20;
-  box-shadow: 0 -2px 8px #0005;
+  box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.05);
 }
 .tab-item {
   flex: 1; background: none; border: none; cursor: pointer;
@@ -99,7 +99,7 @@ body {
   background: var(--bg-card); border-right: 1px solid var(--border);
   z-index: 55; display: flex; flex-direction: column;
   transform: translateX(-105%); transition: transform .25s ease;
-  box-shadow: 4px 0 24px #0008;
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
 }
 .drawer.open { transform: translateX(0); }
 
@@ -129,12 +129,12 @@ body {
 
 /* ─── Sinc Banner ──────────────────────────────────────────────────────────── */
 .sinc-banner {
-  background: var(--cyan-dim); border-bottom: 1px solid var(--cyan)44;
+  background: var(--cyan-dim); border-bottom: 1px solid rgba(2, 132, 199, 0.15);
   padding: 8px 14px; display: flex; align-items: center; gap: 8px;
   font-size: 13px; color: var(--cyan); flex-shrink: 0;
 }
 .sinc-banner span:last-child { margin-left: auto; }
-.btn-small { background: var(--cyan); color: #000; border: none; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.btn-small { background: var(--cyan); color: #fff; border: none; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
 
 /* ─── Splash ───────────────────────────────────────────────────────────────── */
 .splash {
@@ -215,7 +215,7 @@ body {
   display: flex; align-items: center; gap: 12px;
   cursor: pointer; transition: background .12s, border-color .12s;
 }
-.produto-card:hover { background: var(--bg-panel); border-color: var(--cyan)44; }
+.produto-card:hover { background: var(--bg-panel); border-color: rgba(2, 132, 199, 0.25); }
 .produto-card-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .produto-nome { font-size: 14px; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .produto-grupo { font-size: 11px; color: var(--text-2); }
@@ -224,12 +224,12 @@ body {
 /* ─── Badges ───────────────────────────────────────────────────────────────── */
 .badge-cyan {
   background: var(--cyan-dim); color: var(--cyan);
-  border: 1px solid var(--cyan)33; border-radius: 4px;
+  border: 1px solid rgba(2, 132, 199, 0.15); border-radius: 4px;
   font-size: 11px; font-weight: 700; padding: 2px 6px;
   font-family: 'Courier New', monospace; display: inline-block;
 }
 .badge-cyan-dim { background: var(--cyan-dim); color: var(--cyan); border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
-.badge-blue { background: #2563eb22; color: #60a5fa; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
+.badge-blue { background: rgba(37, 99, 235, 0.08); color: #1d4ed8; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
 .badge-tecnico { background: var(--cyan-dim); color: var(--cyan); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
 
 /* ─── Imagem placeholder ───────────────────────────────────────────────────── */
@@ -257,7 +257,7 @@ body {
   cursor: pointer; transition: background .12s, border-color .12s;
   width: 100%; text-align: left; margin-bottom: 10px;
 }
-.sistema-card:hover { background: var(--bg-panel); border-color: var(--cyan)44; }
+.sistema-card:hover { background: var(--bg-panel); border-color: rgba(2, 132, 199, 0.25); }
 .sistema-icon { font-size: 28px; flex-shrink: 0; }
 .sistema-card strong { font-size: 15px; font-weight: 700; display: block; margin-bottom: 3px; }
 .sistema-card p { font-size: 12px; color: var(--text-2); }
@@ -271,7 +271,7 @@ body {
   cursor: pointer; transition: background .12s, border-color .12s;
   text-align: center;
 }
-.grupo-card:hover { background: var(--bg-panel); border-color: var(--cyan)44; }
+.grupo-card:hover { background: var(--bg-panel); border-color: rgba(2, 132, 199, 0.25); }
 .grupo-img { width: 56px; height: 56px; object-fit: contain; }
 .grupo-icon { font-size: 36px; }
 .grupo-label { font-size: 11px; font-weight: 600; color: var(--text-2); }
@@ -315,7 +315,7 @@ body {
 .info-detalhe { padding: 16px 0; }
 .info-detalhe h2 { font-size: 18px; font-weight: 800; margin: 8px 0 12px; }
 .info-detalhe p { font-size: 14px; color: var(--text-2); line-height: 1.6; margin-top: 10px; }
-.info-aviso { background: var(--cyan-dim); border: 1px solid var(--cyan)33; border-radius: var(--radius-sm); padding: 10px 12px; color: var(--cyan); font-size: 13px; margin-top: 16px; }
+.info-aviso { background: var(--cyan-dim); border: 1px solid rgba(2, 132, 199, 0.15); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--cyan); font-size: 13px; margin-top: 16px; }
 .info-data { font-size: 11px; color: var(--text-muted); }
 
 /* ─── Produto Detalhe ──────────────────────────────────────────────────────── */
@@ -331,7 +331,7 @@ body {
 .produto-header .badge-cyan { margin-right: auto; }
 
 .imgs-area { border-bottom: 1px solid var(--border); }
-.img-container { position: relative; overflow: hidden; border-bottom: 1px solid var(--border)44; cursor: pointer; }
+.img-container { position: relative; overflow: hidden; border-bottom: 1px solid rgba(15, 23, 42, 0.08); cursor: pointer; }
 .img-label { position: absolute; top: 8px; left: 10px; font-size: 10px; font-weight: 700; color: var(--cyan); background: var(--cyan-dim); border-radius: 3px; padding: 2px 6px; }
 .produto-img { width: 100%; max-height: 240px; object-fit: contain; display: block; }
 .zoom-hint { position: absolute; bottom: 6px; right: 8px; font-size: 10px; color: var(--text-2); background: #00000088; border-radius: 3px; padding: 2px 6px; }
@@ -380,7 +380,7 @@ body {
   color: var(--text-1); font-size: 15px; font-weight: 700;
   transition: background .12s, border-color .12s;
 }
-.idioma-btn:hover { background: var(--bg-panel); border-color: var(--cyan)66; }
+.idioma-btn:hover { background: var(--bg-panel); border-color: rgba(2, 132, 199, 0.4); }
 .idioma-btn span { font-size: 26px; }
 
 .politica-box { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; max-height: 220px; overflow-y: auto; }
@@ -407,7 +407,7 @@ body {
 .contato-linha:last-child { border-bottom: none; }
 .contato-linha span { font-size: 14px; color: var(--text-2); }
 .btn-wpp { background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); padding: 7px 14px; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
-.btn-cyan { background: var(--cyan); color: #000; border: none; border-radius: var(--radius-sm); padding: 7px 14px; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.btn-cyan { background: var(--cyan); color: #fff; border: none; border-radius: var(--radius-sm); padding: 7px 14px; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
 .btn-outline-sm { background: none; border: 1px solid var(--cyan); color: var(--cyan); border-radius: var(--radius-sm); padding: 7px 14px; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
 .contato-card p { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
 
@@ -434,7 +434,7 @@ body {
   margin: 0 14px 8px; cursor: pointer; position: relative;
   transition: background .12s;
 }
-.msg-card.nao-lida { border-color: var(--cyan)55; background: var(--cyan-dim); }
+.msg-card.nao-lida { border-color: rgba(2, 132, 199, 0.35); background: var(--cyan-dim); }
 .ponto-nao-lido { position: absolute; top: 14px; right: 14px; width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); }
 .msg-icon { font-size: 22px; flex-shrink: 0; }
 .msg-corpo { flex: 1; display: flex; flex-direction: column; gap: 4px; }
@@ -456,7 +456,7 @@ body {
   cursor: pointer; width: 100%; text-align: left; margin-bottom: 10px;
   transition: background .12s, border-color .12s; color: var(--text-1);
 }
-.idioma-card:hover { background: var(--bg-panel); border-color: var(--cyan)44; }
+.idioma-card:hover { background: var(--bg-panel); border-color: rgba(2, 132, 199, 0.25); }
 .idioma-card.ativo { border-color: var(--cyan); background: var(--cyan-dim); }
 .idioma-flag { font-size: 28px; }
 .idioma-card strong { font-size: 15px; font-weight: 700; display: block; }
@@ -474,7 +474,7 @@ body {
 
 /* ─── Botões ───────────────────────────────────────────────────────────────── */
 .btn-primary {
-  background: var(--cyan); color: #000; border: none; border-radius: var(--radius);
+  background: var(--cyan); color: #fff; border: none; border-radius: var(--radius);
   padding: 13px 20px; font-size: 14px; font-weight: 800; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background .15s, transform .1s;
@@ -482,7 +482,7 @@ body {
 .btn-primary:hover { background: var(--cyan-dark); }
 .btn-primary:active { transform: scale(.98); }
 .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
-.btn-primary-full { @extend .btn-primary; width: 100%; }
+.btn-primary-full { width: 100%; }
 
 .btn-outline {
   background: none; border: 1px solid var(--cyan); color: var(--cyan);
@@ -491,7 +491,7 @@ body {
   transition: background .15s;
 }
 .btn-outline:hover { background: var(--cyan-dim); }
-.btn-outline-full { @extend .btn-outline; width: 100%; }
+.btn-outline-full { width: 100%; }
 
 .btn-voltar {
   background: none; border: none; color: var(--cyan);
@@ -505,7 +505,7 @@ body {
 
 /* ─── Botões compostos ─────────────────────────────────────────────────────── */
 .btn-primary-full {
-  width: 100%; background: var(--cyan); color: #000; border: none;
+  width: 100%; background: var(--cyan); color: #fff; border: none;
   border-radius: var(--radius); padding: 14px; font-size: 15px; font-weight: 800;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   gap: 8px; transition: background .15s;
