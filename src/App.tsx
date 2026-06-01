@@ -817,7 +817,7 @@ function TelaSobre({ onVoltar }: { onVoltar: () => void }) {
     <div className="tela">
       <button className="btn-voltar" onClick={onVoltar}>← Voltar</button>
       <div className="sobre-logo-card">
-        <img src="https://raw.githubusercontent.com/rldonadon/catalogo-mf/main/public/logo.png" alt="MF Logo" className="sobre-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
+        <img src="/catalogo-mf/logo.png" alt="MF Logo" className="sobre-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
         <strong>MF SISTEMAS AUTOMOTIVOS</strong>
         <span>Catálogo Digital • Versão 7.0.0</span>
       </div>
@@ -998,7 +998,7 @@ function Drawer({ isOpen, onClose, navigate }: {
       {/* Drawer */}
       <div className={`drawer${isOpen?' open':''}`}>
         <div className="drawer-header">
-          <img src="https://raw.githubusercontent.com/rldonadon/catalogo-mf/main/public/logo.png" alt="MF Logo" className="drawer-logo"
+          <img src="/catalogo-mf/logo.png" alt="MF Logo" className="drawer-logo"
                onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
           <span className="drawer-subtitle">Catálogo Digital MF</span>
         </div>
@@ -1091,7 +1091,7 @@ export default function App() {
 
   if (loading) return (
     <div className="splash">
-      <img src="https://raw.githubusercontent.com/rldonadon/catalogo-mf/main/public/logo.png" alt="MF" className="splash-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
+      <img src="/catalogo-mf/logo.png" alt="MF" className="splash-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
       <div className="spinner" /><p>Carregando catálogo…</p>
     </div>
   )
@@ -1102,7 +1102,7 @@ export default function App() {
       {isAbaPrincipal && (
         <header className="app-header">
           <button className="hamburger" onClick={() => setDrawerOpen(true)} aria-label="Menu">☰</button>
-          <img src="https://raw.githubusercontent.com/rldonadon/catalogo-mf/main/public/logo.png" alt="MF" className="header-logo"
+          <img src="/catalogo-mf/logo.png" alt="MF" className="header-logo"
                onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
           <div style={{ width: 40 }} />
         </header>
