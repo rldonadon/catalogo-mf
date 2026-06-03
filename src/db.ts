@@ -12,6 +12,8 @@ export interface ItemOrcamento { id?: number; codigo: string; nome: string; quan
 export interface Cadastro {
   idioma: string; tipoPessoa: string; cnpjCpf: string; nome: string
   telefone: string; estado: string; cidade: string; email: string; data_cadastro: string
+  token_verificacao?: string; timestamp_aceite?: string; ip_registrado?: string
+  codigoCadastro?: string
 }
 
 class CatalogoDB extends Dexie {
@@ -44,6 +46,9 @@ export async function getCadastro(): Promise<(Cadastro & { id?: number }) | null
 export async function salvarCadastro(dados: Cadastro): Promise<void> {
   await db.cadastro.clear()
   await db.cadastro.add(dados)
+}
+export async function resetarCadastro(): Promise<void> {
+  await db.cadastro.clear()
 }
 
 // ── Sincronização com o JSON publicado ───────────────────────────────────────

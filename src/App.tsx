@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import './App.css'
 import { db, buscarProdutos, sincronizarCatalogo, precisaAtualizar,
-         isCadastrado, getCadastro, salvarCadastro, type Produto } from './db'
+         isCadastrado, getCadastro, salvarCadastro, resetarCadastro, type Produto } from './db'
+import { jsPDF } from 'jspdf'
 import { carregarImagemPrivada, buscarImagensProduto, buscarImagemFigura } from './images'
 import { t, getIdioma, setIdioma, type Idioma } from './i18n'
 import { WHATSAPP_NUMS, TELEFONES, EMAILS_CONTATO, ENDERECO, SISTEMAS_FIGURA, WEBHOOK_URL } from './config'
@@ -372,9 +373,147 @@ function TelaFavoritos({ navigate }: { navigate: (t: Tela, p?: string) => void }
 function TelaOrcamento() {
   const [itens, setItens] = useState<Array<{ id?: number; codigo: string; nome: string; quantidade: number }>>([])
   const [enviando, setEnviando] = useState(false)
+  const [gerandoPDF, setGerandoPDF] = useState(false)
 
   const reload = async () => setItens(await db.orcamento.toArray())
   useEffect(() => { reload() }, [])
+
+  const gerarPDF = async () => {
+    setGerandoPDF(true)
+    try {
+      const cad = await getCadastro()
+      const doc = new jsPDF()
+
+      // Configurar cores da marca MF Freios (Azul escuro institucional)
+      doc.setFillColor(0, 30, 80)
+      doc.rect(0, 0, 210, 38, 'F')
+
+      // Título do documento no cabeçalho
+      doc.setTextColor(255, 255, 255)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(22)
+      doc.text('MF SISTEMAS AUTOMOTIVOS', 15, 18)
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Divisão Freios a Ar — Cotação de Reparos', 15, 25)
+
+      // Data de emissão no cabeçalho
+      const dataStr = new Date().toLocaleDateString('pt-BR')
+      const horaStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      doc.setFontSize(10)
+      doc.text(`Data: ${dataStr} ${horaStr}`, 155, 18)
+      doc.text('Catálogo Digital', 155, 25)
+
+      // Informações do cliente
+      let y = 52
+      doc.setTextColor(15, 23, 42)
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.text('DADOS DO CLIENTE', 15, 46)
+
+      // Linha separadora discreta
+      doc.setDrawColor(226, 232, 240)
+      doc.setLineWidth(0.5)
+      doc.line(15, 48, 195, 48)
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      
+      if (cad) {
+        doc.text(`Nome: ${cad.nome || 'Não informado'}`, 15, y)
+        doc.text(`WhatsApp: ${cad.whatsapp || 'Não informado'}`, 15, y + 6)
+        doc.text(`Cidade/UF: ${cad.cidade || 'Não informado'}/${cad.estado || 'UF'}`, 15, y + 12)
+        
+        doc.text(`Empresa: ${cad.empresa || 'Não informada'}`, 110, y)
+        doc.text(`CNPJ/CPF: ${cad.cnpj || 'Não informado'}`, 110, y + 6)
+        doc.text(`E-mail: ${cad.email || 'Não informado'}`, 110, y + 12)
+      } else {
+        doc.text('Cadastro de cliente não localizado no aplicativo local.', 15, y)
+      }
+
+      // Detalhes do orçamento
+      y = 80
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ITENS DA COTAÇÃO', 15, y)
+
+      doc.line(15, y + 2, 195, y + 2)
+
+      // Tabela de itens
+      y = 90
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setFillColor(241, 245, 249)
+      doc.rect(15, y, 180, 8, 'F')
+      doc.text('CÓDIGO', 18, y + 5.5)
+      doc.text('DESCRIÇÃO DO PRODUTO', 52, y + 5.5)
+      doc.text('QTD', 182, y + 5.5)
+
+      // Listar os itens
+      y += 8
+      doc.setFont('helvetica', 'normal')
+      itens.forEach((it, idx) => {
+        if (idx % 2 === 1) {
+          doc.setFillColor(248, 250, 252)
+          doc.rect(15, y, 180, 8, 'F')
+        }
+        
+        doc.setFont('helvetica', 'bold')
+        doc.text(it.codigo, 18, y + 5.5)
+        
+        doc.setFont('helvetica', 'normal')
+        const nomeTruncado = it.nome.length > 55 ? it.nome.substring(0, 52) + '...' : it.nome
+        doc.text(nomeTruncado, 52, y + 5.5)
+        
+        doc.setFont('helvetica', 'bold')
+        doc.text(String(it.quantidade), 184, y + 5.5)
+        
+        y += 8
+        
+        if (y > 270 && idx < itens.length - 1) {
+          doc.addPage()
+          y = 20
+          
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.setFillColor(241, 245, 249)
+          doc.rect(15, y, 180, 8, 'F')
+          doc.text('CÓDIGO', 18, y + 5.5)
+          doc.text('DESCRIÇÃO DO PRODUTO', 52, y + 5.5)
+          doc.text('QTD', 182, y + 5.5)
+          y += 8
+          doc.setFont('helvetica', 'normal')
+        }
+      })
+
+      // Rodapé institucional
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.setFont('helvetica', 'italic')
+      doc.text('Orçamento gerado pelo Catálogo Digital de Reparos MF Freios.', 15, 282)
+      doc.text('Obrigado pela preferência!', 155, 282)
+
+      // Converter para blob e compartilhar ou baixar
+      const pdfBlob = doc.output('blob')
+      const fileName = `orcamento-mf-${dataStr.replace(/\//g, '-')}.pdf`
+      
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' })
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Orçamento MF Freios',
+          text: `Seguem os itens da cotação MF Freios.`
+        })
+      } else {
+        doc.save(fileName)
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao gerar orçamento em PDF. Tente usar o compartilhamento de texto comum.')
+    } finally {
+      setGerandoPDF(false)
+    }
+  }
 
   const alterarQty = async (id: number | undefined, delta: number, atual: number) => {
     if (!id) return
@@ -442,8 +581,11 @@ function TelaOrcamento() {
             <button className="btn-primary" onClick={enviarEmail} disabled={enviando}>
               {enviando ? '⏳ Enviando…' : '✉️ Enviar por E-mail'}
             </button>
+            <button className="btn-primary-full" onClick={gerarPDF} disabled={gerandoPDF} style={{ background: 'var(--cyan)' }}>
+              {gerandoPDF ? '⏳ Gerando PDF…' : '📄 Gerar e Enviar PDF'}
+            </button>
             <button className="btn-outline-full" onClick={compartilhar}>
-              📤 Compartilhar / WhatsApp
+              📤 Compartilhar Texto
             </button>
           </div>
         </>
@@ -700,6 +842,9 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
   const [cidade, setCidade] = useState('')
   const [estado, setEstado] = useState('')
   const [email, setEmail] = useState('')
+  const [aceitoCheckbox, setAceitoCheckbox] = useState(false)
+  const [cadastroSending, setCadastroSending] = useState(false)
+  const [codigoCadastro, setCodigoCadastro] = useState('')
 
   useEffect(() => {
     getCadastro().then(c => {
@@ -709,6 +854,7 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
       setCnpjCpf(c.cnpjCpf || ''); setNome(c.nome || '')
       setTelefone(c.telefone || ''); setCidade(c.cidade || '')
       setEstado(c.estado || ''); setEmail(c.email || '')
+      setCodigoCadastro(c.codigoCadastro || '')
     })
   }, [])
 
@@ -732,15 +878,115 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
     if (!telefone.trim() || telefone.length < 10) return alert('Insira um telefone válido.')
     if (!estado.trim()) return alert('Preencha o Estado.')
     if (!cidade.trim()) return alert('Preencha a Cidade.')
-    setIdioma(lang)
-    await salvarCadastro({ idioma: lang, tipoPessoa: tipo, cnpjCpf, nome, telefone, estado, cidade, email, data_cadastro: new Date().toISOString() })
-    // Envia para Google Sheets
-    const ddd = telefone.match(/\((\d{2})\)/)?.[1] ?? ''
-    await fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo: 'cadastro', nome, empresa: tipo === 'PJ' ? nome : 'Pessoa Física', cnpj: cnpjCpf, email, ddd, telefone: telefone.replace(/\D/g,'').substring(2), estado, cidade, data: new Date().toISOString() })
-    }).catch(() => {})
-    alert(isEdit ? 'Cadastro atualizado! ✅' : 'Cadastro realizado! ✅')
-    onVoltar()
+    if (!email.trim() || !email.includes('@')) return alert('Por favor, preencha um e-mail válido.')
+
+    if (!isEdit && !aceitoCheckbox) {
+      return alert('É necessário aceitar a Política de Privacidade para prosseguir.')
+    }
+
+    const dddMatch = telefone.match(/\((\d{2})\)/)
+    const ddd = dddMatch ? dddMatch[1] : telefone.replace(/\D/g, '').substring(0, 2)
+    const numTelefone = telefone.replace(/\D/g, '').substring(2)
+
+    const prosseguirLocal = async (token?: string, timestamp?: string, ip?: string, id_cliente?: number) => {
+      let finalCodigo = id_cliente ? String(id_cliente).padStart(5, '0') : '';
+      if (!finalCodigo && isEdit) {
+        const cadAtual = await getCadastro();
+        finalCodigo = cadAtual?.codigoCadastro || '';
+      }
+      if (!finalCodigo) {
+        finalCodigo = Math.floor(10000 + Math.random() * 90000).toString();
+      }
+
+      setIdioma(lang)
+      await salvarCadastro({
+        idioma: lang,
+        tipoPessoa: tipo,
+        cnpjCpf,
+        nome,
+        telefone,
+        estado,
+        cidade,
+        email,
+        token_verificacao: token || '',
+        timestamp_aceite: timestamp || '',
+        ip_registrado: ip || '',
+        data_cadastro: new Date().toISOString(),
+        codigoCadastro: finalCodigo
+      })
+
+      // Envia para Google Sheets (backup histórico)
+      try {
+        await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'cadastro',
+            nome,
+            empresa: tipo === 'PJ' ? nome : 'Pessoa Física',
+            cnpj: cnpjCpf,
+            email,
+            ddd,
+            telefone: numTelefone,
+            estado,
+            cidade,
+            token_verificacao: token || '',
+            data: new Date().toISOString(),
+            codigoCadastro: finalCodigo
+          })
+        })
+      } catch (err) {
+        console.error("Erro no webhook backup:", err)
+      }
+
+      alert(isEdit ? `Cadastro atualizado! ✅\nCódigo do Cadastro: ${finalCodigo}` : `Cadastro realizado! ✅\nCódigo do Cadastro: ${finalCodigo}`)
+      onVoltar()
+    }
+
+    if (isEdit) {
+      await prosseguirLocal()
+    } else {
+      setCadastroSending(true)
+      const payload = {
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+        empresa: tipo === 'PJ' ? nome.trim() : 'Pessoa Física',
+        tipo_doc: tipo === 'PJ' ? 'cnpj' : 'cpf',
+        documento: cnpjCpf.replace(/\D/g, ''),
+        estado: estado.trim().toUpperCase(),
+        cidade: cidade.trim(),
+        ddd: ddd,
+        telefone: numTelefone,
+        segmento: tipo === 'PJ' ? 'Pessoa Jurídica' : 'Pessoa Física',
+        aceito: true
+      }
+
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 12000)
+
+        const res = await fetch("https://rldonadon.pythonanywhere.com/api/cadastro", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+
+        const data = await res.json()
+        if (res.ok && data && data.token_verificacao) {
+          await prosseguirLocal(data.token_verificacao, data.timestamp_aceite, data.ip_registrado, data.id)
+        } else {
+          const detail = data && data.detail ? data.detail : 'Erro no processamento.'
+          alert(`Erro no Cadastro: ${detail}`)
+        }
+      } catch (e: any) {
+        console.error("Erro no cadastro:", e)
+        alert(`Erro de conexão com o servidor de privacidade. Certifique-se de que a API esteja online.`)
+      } finally {
+        setCadastroSending(false)
+      }
+    }
   }
 
   return (
@@ -769,11 +1015,26 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
       {etapa === 'politica' && (
         <div className="cadastro-etapa">
           <h2 className="cadastro-titulo">Termos & Política de Privacidade</h2>
-          <div className="politica-box">
+          <div className="politica-box" style={{ maxHeight: '350px' }}>
             <h3>POLÍTICA DE PRIVACIDADE E SEGURANÇA</h3>
-            <p>A MF Sistemas Automotivos respeita a sua privacidade. Ao utilizar nosso catálogo digital móvel, coletamos os dados fornecidos no formulário de cadastro apenas para identificar acessos legítimos de clientes, mecânicos e distribuidores autorizados.</p>
-            <p>Nenhum dado pessoal, comercial ou estatístico de busca offline ou orçamento é compartilhado com terceiros sem prévia autorização.</p>
-            <p>Ao prosseguir e concordar, você concorda com o armazenamento dos dados de cadastro e consulta em nossos servidores apenas para fins de melhoria de qualidade e validação de licenças.</p>
+            <p>A MF Sistemas Automotivos (MF Freios), pessoa jurídica de direito privado, com sede e administração na Av. Dr. José de Paula Eduardo, n° 180, Distrito Industrial | Monte Alto - SP, CEP: 15910-458, simplesmente denominada como MF Freios, preza pela transparência, segurança e privacidade. Entendemos a importância dos registros eletrônicos e dados pessoais fornecidos por você (“Titular”) na utilização desta ferramenta. Regulamos, por meio da presente Política de Privacidade e Proteção de Dados (“Política”), de forma simples e transparente, atendendo à Lei n.º 13.709/2018 (Lei Geral de Proteção de Dados Pessoais - LGPD), quais dados serão tratados, suas finalidades e sua eliminação.</p>
+            <p>Em caso de dúvidas, reclamações ou solicitações, por favor entre em contato conosco por meio do e-mail: <strong>vendas.mffreios@gmail.com</strong>.</p>
+            <h3>Controlador dos Dados:</h3>
+            <p>MF Sistemas Automotivos. Endereço: Av. Dr. José de Paula Eduardo, n° 180, Distrito Industrial | Monte Alto - SP, CEP: 15910-458.</p>
+            <h3>Finalidade do Tratamento:</h3>
+            <p>Utilizamos seus dados pessoais para:</p>
+            <p>• Entrar em contato com você, Titular;</p>
+            <p>• Liberar o acesso ao catálogo eletrônico de produtos;</p>
+            <p>• Enviar e compartilhar informações, conteúdos técnicos, novidades e lançamentos de produtos da MF Freios.</p>
+            <h3>Quais Dados Pessoais Coletamos:</h3>
+            <p>• Nome, CPF/CNPJ, E-mail, Endereço e Telefones.</p>
+            <p>• Informações sobre o dispositivo utilizado para a navegação.</p>
+            <p>• Pesquisas, resultados e ações realizadas dentro da ferramenta.</p>
+            <p>A MF Freios não trata, para as finalidades aqui dispostas, dados considerados sensíveis pela Lei nº 13.709/2018.</p>
+            <h3>Compartilhamento de Dados:</h3>
+            <p>A MF Freios não comercializa seus dados pessoais em hipótese alguma. Os dados não são divulgados para terceiros, exceptuando determinação legal/judicial ou com a empresa/desenvolvedor terceirizado responsável pela gestão técnica do nosso catálogo eletrônico, que atua estritamente sob nossas diretrizes de segurança.</p>
+            <h3>Seus Direitos (Eliminação dos Dados):</h3>
+            <p>Você, na condição de Titular, pode solicitar a qualquer momento a confirmação da existência de tratamento, a correção de dados incompletos ou a eliminação definitiva de seus dados de nossa base de dados. Para isso, basta enviar uma solicitação para o e-mail: <strong>vendas.mffreios@gmail.com</strong>.</p>
           </div>
           <div className="botao-row">
             <button className="btn-outline" onClick={() => setEtapa('idioma')}>Voltar</button>
@@ -800,11 +1061,32 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
               <label style={{ flex: 2 }}>Cidade *<input className="form-input" value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Ex: São Paulo" /></label>
               <label style={{ flex: 1 }}>UF *<input className="form-input" maxLength={2} value={estado} onChange={e => setEstado(e.target.value.toUpperCase())} placeholder="SP" /></label>
             </div>
-            <label>E-mail (Opcional)<input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nome@email.com" /></label>
+            <label>E-mail *<input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nome@email.com" /></label>
           </div>
+          {!isEdit && (
+            <div className="lgpd-checkbox-container" style={{ margin: '15px 0', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <input
+                type="checkbox"
+                id="aceitoCheckbox"
+                checked={aceitoCheckbox}
+                onChange={e => setAceitoCheckbox(e.target.checked)}
+                style={{ marginTop: '4px', cursor: 'pointer', width: '18px', height: '18px' }}
+              />
+              <label htmlFor="aceitoCheckbox" style={{ fontSize: '0.9rem', color: 'var(--text)', cursor: 'pointer', lineHeight: '1.4' }}>
+                Li e aceito a <span className="link-inline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEtapa('politica'); }} style={{ color: 'var(--cyan)', textDecoration: 'underline', fontWeight: 'bold' }}>Política de Privacidade</span> da MF Sistemas Automotivos.
+              </label>
+            </div>
+          )}
+          {isEdit && (
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '15px', textAlign: 'center', background: 'var(--bg-panel)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              Código do Cadastro: <strong>{codigoCadastro || "------"}</strong>
+            </div>
+          )}
           <div className="botao-row">
             {!isEdit && <button className="btn-outline" onClick={() => setEtapa('politica')}>Voltar</button>}
-            <button className="btn-primary" onClick={finalizar}>Finalizar Cadastro</button>
+            <button className="btn-primary" onClick={finalizar} disabled={(!isEdit && !aceitoCheckbox) || cadastroSending}>
+              {cadastroSending ? '⏳ Cadastrando...' : 'Finalizar Cadastro'}
+            </button>
           </div>
         </div>
       )}
@@ -982,11 +1264,35 @@ function TelaPolitica({ onVoltar }: { onVoltar: () => void }) {
         <span className="header-title">Política de Privacidade</span>
         <div style={{ width: 40 }} />
       </header>
-      <div className="politica-full">
-        <h3>1. Coleta de Informações</h3><p>Coletamos dados de cadastro (nome, CNPJ/CPF, telefone, cidade, estado, e-mail) para identificar acessos legítimos de clientes, mecânicos e distribuidores autorizados.</p>
-        <h3>2. Finalidade do Tratamento</h3><ul><li>Identificar clientes autorizados</li><li>Sincronizar cotações e orçamentos</li><li>Enviar notificações de novos produtos</li></ul>
-        <h3>3. Segurança e Armazenamento</h3><p>Dados de busca e orçamento são armazenados localmente no dispositivo (IndexedDB). Dados de cadastro são enviados via SSL para nossos servidores. Não compartilhamos dados com terceiros.</p>
-        <h3>4. Direitos sob a LGPD</h3><p>Conforme a Lei nº 13.709/2018, você tem direito de acesso, correção e exclusão dos seus dados. Entre em contato: <a href="mailto:vendas.mffreios@gmail.com">vendas.mffreios@gmail.com</a></p>
+      <div className="politica-full" style={{ paddingBottom: '30px' }}>
+        <h3>Política de Privacidade - MF Sistemas Automotivos</h3>
+        <p>A MF Sistemas Automotivos (MF Freios), pessoa jurídica de direito privado, com sede e administração na Av. Dr. José de Paula Eduardo, n° 180, Distrito Industrial | Monte Alto - SP, CEP: 15910-458, simplesmente denominada como MF Freios, preza pela transparência, segurança e privacidade. Entendemos a importância dos registros eletrônicos e dados pessoais fornecidos por você (“Titular”) na utilização desta ferramenta. Regulamos, por meio da presente Política de Privacidade e Proteção de Dados (“Política”), de forma simples e transparente, atendendo à Lei n.º 13.709/2018 (Lei Geral de Proteção de Dados Pessoais - LGPD), quais dados serão tratados, suas finalidades e sua eliminação.</p>
+        <p>Em caso de dúvidas, reclamações ou solicitações, por favor entre em contato conosco por meio do e-mail: <strong>vendas.mffreios@gmail.com</strong>.</p>
+        
+        <h3>Controlador dos Dados:</h3>
+        <p>MF Sistemas Automotivos. Endereço: Av. Dr. José de Paula Eduardo, n° 180, Distrito Industrial | Monte Alto - SP, CEP: 15910-458.</p>
+        
+        <h3>Finalidade do Tratamento:</h3>
+        <p>Utilizamos seus dados pessoais para:</p>
+        <ul>
+          <li>Entrar em contato com você, Titular;</li>
+          <li>Liberar o acesso ao catálogo eletrônico de produtos;</li>
+          <li>Enviar e compartilhar informações, conteúdos técnicos, novidades e lançamentos de produtos da MF Freios.</li>
+        </ul>
+        
+        <h3>Quais Dados Pessoais Coletamos:</h3>
+        <ul>
+          <li>Nome, CPF/CNPJ, E-mail, Endereço e Telefones.</li>
+          <li>Informações sobre o dispositivo utilizado para a navegação.</li>
+          <li>Pesquisas, resultados e ações realizadas dentro da ferramenta.</li>
+        </ul>
+        <p>A MF Freios não trata, para as finalidades aqui dispostas, dados considerados sensíveis pela Lei nº 13.709/2018.</p>
+        
+        <h3>Compartilhamento de Dados:</h3>
+        <p>A MF Freios não comercializa seus dados pessoais em hipótese alguma. Os dados não são divulgados para terceiros, exceto quando houver determinação legal/judicial ou com a empresa/desenvolvedor terceirizado responsável pela gestão técnica do nosso catálogo eletrônico, que atua estritamente sob nossas diretrizes de segurança.</p>
+        
+        <h3>Seus Direitos (Eliminação dos Dados):</h3>
+        <p>Você, na condição of Titular, pode solicitar a qualquer momento a confirmação da existência de tratamento, a correção de dados incompletos ou a eliminação definitiva de seus dados de nossa base de dados. Para isso, basta enviar uma solicitação para o e-mail: <strong>vendas.mffreios@gmail.com</strong>.</p>
       </div>
     </div>
   )
@@ -1196,6 +1502,43 @@ export default function App() {
       const cadastrado = await isCadastrado()
       if (!cadastrado) {
         setTela('cadastro')
+      } else {
+        // Validação remota silenciosa de integridade do cadastro
+        const dados = await getCadastro()
+        if (dados && dados.token_verificacao) {
+          try {
+            const res = await fetch("https://rldonadon.pythonanywhere.com/api/autenticar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ token_verificacao: dados.token_verificacao })
+            })
+
+            if (res.status === 404 || res.status === 403) {
+              console.warn("Cadastro revogado no servidor. Resetando acesso local.");
+              await resetarCadastro()
+              setTela('cadastro')
+            } else if (res.ok) {
+              const authData = await res.json()
+              if (authData && authData.dados && authData.dados.id) {
+                const finalCodigo = String(authData.dados.id).padStart(5, '0');
+                if (dados.codigoCadastro !== finalCodigo) {
+                  await salvarCadastro({
+                    ...dados,
+                    codigoCadastro: finalCodigo
+                  })
+                }
+              }
+            }
+          } catch (netErr) {
+            // Erro de rede/timeout: permite entrar usando o cadastro local em modo offline
+            console.log("Validação silenciosa offline: usando cache local.", netErr)
+          }
+        } else {
+          // Sem token (cadastro legado): pede recadastro por conformidade LGPD
+          console.warn("Cadastro legado detectado. Exigindo recadastro.")
+          await resetarCadastro()
+          setTela('cadastro')
+        }
       }
       const precisa = await precisaAtualizar()
       if (precisa) {
