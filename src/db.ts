@@ -15,20 +15,32 @@ export interface Cadastro {
   token_verificacao?: string; timestamp_aceite?: string; ip_registrado?: string
   codigoCadastro?: string
 }
+export interface Informativo {
+  id: number;
+  numero: number;
+  titulo: string;
+  tipo: string;
+  data: string;
+  arquivo: string;
+  destaque: number;
+  imagem: string | null;
+}
 
 class CatalogoDB extends Dexie {
   produtos!: Table<Produto>; meta!: Table<Meta>
   favoritos!: Table<Favorito>; orcamento!: Table<ItemOrcamento>
   cadastro!: Table<Cadastro & { id?: number }>
+  informativos!: Table<Informativo>
 
   constructor() {
     super('CatalogoDB')
-    this.version(2).stores({
+    this.version(3).stores({
       produtos: 'codigo, nome, grupo, subgrupo, data_lancamento',
       meta: 'chave',
       favoritos: 'codigo',
       orcamento: '++id, codigo',
       cadastro: '++id',
+      informativos: 'id, numero, destaque',
     })
   }
 }
@@ -61,13 +73,15 @@ export async function sincronizarCatalogo(
 
   onProgress?.(50, 'Baixando catálogo…')
   const data = await resp.json()
-  const { meta = [], produtos = [] } = data
+  const { meta = [], produtos = [], informativos = [] } = data
 
   onProgress?.(80, 'Salvando offline…')
-  await db.transaction('rw', db.produtos, db.meta, async () => {
+  await db.transaction('rw', db.produtos, db.meta, db.informativos, async () => {
     await db.produtos.clear()
     await db.meta.clear()
+    await db.informativos.clear()
     await db.produtos.bulkAdd(produtos)
+    await db.informativos.bulkAdd(informativos)
     for (const m of meta) await db.meta.put(m)
   })
 

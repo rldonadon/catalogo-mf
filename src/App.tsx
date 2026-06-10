@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import './App.css'
 import { db, buscarProdutos, sincronizarCatalogo, precisaAtualizar,
-         isCadastrado, getCadastro, salvarCadastro, resetarCadastro, type Produto } from './db'
+         isCadastrado, getCadastro, salvarCadastro, resetarCadastro, type Produto, type Informativo } from './db'
 import { jsPDF } from 'jspdf'
 import { carregarImagemPrivada, buscarImagensProduto, buscarImagemFigura } from './images'
 import { t, getIdioma, setIdioma, type Idioma } from './i18n'
-import { WHATSAPP_NUMS, TELEFONES, EMAILS_CONTATO, ENDERECO, SISTEMAS_FIGURA, WEBHOOK_URL } from './config'
+import { WHATSAPP_NUMS, TELEFONES, EMAILS_CONTATO, ENDERECO, SISTEMAS_FIGURA, WEBHOOK_URL, IMG_BASE } from './config'
 
 const BASE_LOGO = `${import.meta.env.BASE_URL}logo.png`
 const BASE_BANNER = `${import.meta.env.BASE_URL}caminhao_banner.png`
@@ -597,19 +597,48 @@ function TelaOrcamento() {
 // ═══════════════════════════════════════════════════════════
 //  TELA: INFORMATIVOS
 // ═══════════════════════════════════════════════════════════
-const INFO_ITEMS = [
-  { id: 1, titulo: 'Câmara de Freio Tipo 30', data: '15/03/2024', resumo: 'Especificações de instalação e aplicações para câmaras tipo 30.' },
-  { id: 2, titulo: 'Válvula de Pé – Ajuste e Manutenção', data: '20/02/2024', resumo: 'Procedimento de ajuste e diagnóstico de falhas em válvulas de pedal.' },
-  { id: 3, titulo: 'Cuíca Tristop – Diagnóstico de Falhas', data: '10/01/2024', resumo: 'Guia completo de diagnóstico para cuícas Tristop spring brake.' },
-  { id: 4, titulo: 'Suspensão Pneumática – Nivelamento', data: '05/12/2023', resumo: 'Ajuste de niveladoras em suspensões pneumáticas de ônibus e carretas.' },
-]
-
 function TelaInfo({ onSubnivelChange }: { onSubnivelChange: (sub: boolean) => void }) {
-  const [detalhe, setDetalhe] = useState<typeof INFO_ITEMS[0] | null>(null)
+  const [informativos, setInformativos] = useState<Informativo[]>([])
+  const [detalhe, setDetalhe] = useState<Informativo | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [pdfLoading, setPdfLoading] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    db.informativos.orderBy('numero').reverse().toArray().then(items => {
+      if (alive) {
+        setInformativos(items)
+        setLoading(false)
+      }
+    }).catch(err => {
+      console.error("Erro ao ler informativos do IndexedDB:", err)
+      if (alive) setLoading(false)
+    })
+    return () => { alive = false }
+  }, [])
 
   useEffect(() => {
     onSubnivelChange(detalhe !== null)
   }, [detalhe, onSubnivelChange])
+
+  const handleOpenPdf = async (arquivo: string) => {
+    if (pdfLoading) return
+    setPdfLoading(true)
+    try {
+      const url = `${IMG_BASE}/informativos/${arquivo}`
+      const blobUrl = await carregarImagemPrivada(url)
+      if (blobUrl) {
+        window.open(blobUrl, '_blank')
+      } else {
+        alert('Não foi possível carregar o arquivo PDF do informativo técnico (erro ao baixar).')
+      }
+    } catch (err) {
+      console.error("Erro ao abrir PDF:", err)
+      alert('Ocorreu um erro ao carregar o PDF.')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
 
   if (detalhe) return (
     <div className="tela">
@@ -619,11 +648,53 @@ function TelaInfo({ onSubnivelChange }: { onSubnivelChange: (sub: boolean) => vo
         <div style={{ width: 40 }} />
       </header>
       <div className="info-detalhe">
-        <small className="info-data">{detalhe.data}</small>
-        <h2>{detalhe.titulo}</h2>
+        <small className="info-data">{detalhe.data ? new Date(detalhe.data + 'T12:00:00').toLocaleDateString('pt-BR') : ''}</small>
+        <h2>Informativo N° {detalhe.numero} — {detalhe.titulo}</h2>
         <hr />
-        <p>{detalhe.resumo}</p>
-        <p className="info-aviso">O conteúdo completo está disponível com seu representante MF Sistemas Automotivos.</p>
+        
+        <div className="badge-row" style={{ margin: '15px 0' }}>
+          <span className={`badge-tecnico`} style={{
+            background: detalhe.tipo === 'LANCAMENTO' ? '#cce5ff' : detalhe.tipo === 'SUBSTITUICAO' ? '#fff3cd' : detalhe.tipo === 'PROMOCAO' ? '#d4edda' : '#e2e3e5',
+            color: detalhe.tipo === 'LANCAMENTO' ? '#004085' : detalhe.tipo === 'SUBSTITUICAO' ? '#856404' : detalhe.tipo === 'PROMOCAO' ? '#155724' : '#383d41',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            fontSize: '0.75rem',
+            fontWeight: 'bold',
+            textTransform: 'uppercase'
+          }}>
+            {detalhe.tipo}
+          </span>
+        </div>
+
+        {detalhe.resumo && <p>{detalhe.resumo}</p>}
+        
+        <p className="info-aviso" style={{ marginTop: '20px', padding: '12px', background: '#f8fafc', borderLeft: '3px solid #0056b3', borderRadius: '4px', fontSize: '0.85rem' }}>
+          O conteúdo completo deste informativo técnico está disponível em formato PDF.
+        </p>
+
+        <button 
+          onClick={() => handleOpenPdf(detalhe.arquivo)} 
+          className="btn-primary-full" 
+          disabled={pdfLoading}
+          style={{ 
+            textAlign: 'center', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '8px', 
+            marginTop: '20px',
+            padding: '12px',
+            cursor: pdfLoading ? 'not-allowed' : 'pointer',
+            opacity: pdfLoading ? 0.7 : 1,
+            width: '100%',
+            border: 'none',
+            fontSize: '1rem',
+            color: 'white',
+            borderRadius: '6px'
+          }}
+        >
+          {pdfLoading ? '⏳ Baixando PDF…' : '📄 Abrir PDF do Informativo'}
+        </button>
       </div>
     </div>
   )
@@ -631,14 +702,34 @@ function TelaInfo({ onSubnivelChange }: { onSubnivelChange: (sub: boolean) => vo
   return (
     <div className="tela">
       <h2 className="sec-titulo">📰 Informativos Técnicos</h2>
-      {INFO_ITEMS.map(item => (
-        <div key={item.id} className="info-card" onClick={() => setDetalhe(item)}>
+      
+      {loading && <div className="loading-row"><div className="spinner"/></div>}
+      
+      {!loading && informativos.length === 0 && (
+        <div className="empty-state">
+          <span style={{ fontSize: 48 }}>📰</span>
+          <p>Nenhum informativo publicado ainda.</p>
+        </div>
+      )}
+
+      {!loading && informativos.map(item => (
+        <div key={item.id} className="info-card" onClick={() => setDetalhe(item)} style={{ cursor: 'pointer' }}>
           <div className="info-card-header">
-            <small>{item.data}</small><span className="badge-tecnico">TÉCNICO</span>
+            <small>{item.data ? new Date(item.data + 'T12:00:00').toLocaleDateString('pt-BR') : ''}</small>
+            <span className={`badge-tecnico`} style={{
+              background: item.tipo === 'LANCAMENTO' ? '#cce5ff' : item.tipo === 'SUBSTITUICAO' ? '#fff3cd' : item.tipo === 'PROMOCAO' ? '#d4edda' : '#e2e3e5',
+              color: item.tipo === 'LANCAMENTO' ? '#004085' : item.tipo === 'SUBSTITUICAO' ? '#856404' : item.tipo === 'PROMOCAO' ? '#155724' : '#383d41',
+              padding: '2px 8px',
+              borderRadius: '20px',
+              fontSize: '0.7rem',
+              fontWeight: 'bold',
+              textTransform: 'uppercase'
+            }}>
+              {item.tipo}
+            </span>
           </div>
-          <strong>{item.titulo}</strong>
-          <p>{item.resumo}</p>
-          <span className="info-link">Ler mais →</span>
+          <strong>N° {item.numero} — {item.titulo}</strong>
+          <span className="info-link" style={{ marginTop: '8px', display: 'block', fontSize: '0.8rem', color: '#0056b3', fontWeight: 'bold' }}>Visualizar →</span>
         </div>
       ))}
     </div>
@@ -889,14 +980,18 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
     const numTelefone = telefone.replace(/\D/g, '').substring(2)
 
     const prosseguirLocal = async (token?: string, timestamp?: string, ip?: string, id_cliente?: number) => {
+      const cadAtual = await getCadastro();
       let finalCodigo = id_cliente ? String(id_cliente).padStart(5, '0') : '';
       if (!finalCodigo && isEdit) {
-        const cadAtual = await getCadastro();
         finalCodigo = cadAtual?.codigoCadastro || '';
       }
       if (!finalCodigo) {
         finalCodigo = Math.floor(10000 + Math.random() * 90000).toString();
       }
+
+      const finalToken = token || cadAtual?.token_verificacao || '';
+      const finalTimestamp = timestamp || cadAtual?.timestamp_aceite || '';
+      const finalIp = ip || cadAtual?.ip_registrado || '';
 
       setIdioma(lang)
       await salvarCadastro({
@@ -908,10 +1003,10 @@ function TelaCadastro({ onVoltar }: { onVoltar: () => void }) {
         estado,
         cidade,
         email,
-        token_verificacao: token || '',
-        timestamp_aceite: timestamp || '',
-        ip_registrado: ip || '',
-        data_cadastro: new Date().toISOString(),
+        token_verificacao: finalToken,
+        timestamp_aceite: finalTimestamp,
+        ip_registrado: finalIp,
+        data_cadastro: cadAtual?.data_cadastro || new Date().toISOString(),
         codigoCadastro: finalCodigo
       })
 
