@@ -68,7 +68,7 @@ export async function sincronizarCatalogo(
   onProgress?: (pct: number, msg: string) => void
 ): Promise<{ total: number; versao: string }> {
   onProgress?.(10, 'Verificando versão…')
-  const resp = await fetch(CATALOGO_JSON_URL, { cache: 'no-cache' })
+  const resp = await fetch(`${CATALOGO_JSON_URL}?t=${Date.now()}`, { cache: 'no-cache' })
   if (!resp.ok) throw new Error(`Falha HTTP ${resp.status}`)
 
   onProgress?.(50, 'Baixando catálogo…')
@@ -91,7 +91,22 @@ export async function sincronizarCatalogo(
 }
 
 export async function precisaAtualizar(): Promise<boolean> {
-  return (await db.produtos.count()) === 0
+  const count = await db.produtos.count()
+  if (count === 0) return true
+
+  try {
+    const resp = await fetch(`${CATALOGO_JSON_URL}?t=${Date.now()}`, { cache: 'no-cache' })
+    if (!resp.ok) return false
+    const data = await resp.json()
+    const versaoRemota = data.meta?.find((m: any) => m.chave === 'versao')?.valor
+    const localMeta = await db.meta.get('versao')
+    const versaoLocal = localMeta?.valor
+    
+    return !!versaoRemota && versaoRemota !== versaoLocal
+  } catch (e) {
+    console.warn("Erro ao verificar atualizações automáticas:", e)
+    return false
+  }
 }
 
 // ── Busca de produtos ─────────────────────────────────────────────────────────

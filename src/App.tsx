@@ -1428,9 +1428,10 @@ function TelaIdioma({ onVoltar }: { onVoltar: () => void }) {
 // ═══════════════════════════════════════════════════════════
 //  COMPONENTE: DRAWER
 // ═══════════════════════════════════════════════════════════
-function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA }: {
+function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA, onVerificarAtualizacoes }: {
   isOpen: boolean; onClose: () => void; navigate: (t: Tela) => void;
   theme: 'light' | 'dark'; toggleTheme: () => void; instalarPWA: () => void;
+  onVerificarAtualizacoes: () => void;
 }) {
   const [fontScale, setFontScale] = useState(() => parseFloat(localStorage.getItem('mf_font_scale') || '1'))
   const [fontModal, setFontModal] = useState(false)
@@ -1462,7 +1463,7 @@ function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA }: 
     { icon: '🏢', label: t('menu.sobre_quinelato'), action: () => goTo('sobre') },
     { icon: '🌓', label: theme === 'dark' ? 'Tema Claro' : 'Tema Escuro', action: () => { onClose(); toggleTheme(); } },
     { icon: '📥', label: 'Instalar Aplicativo', action: () => { onClose(); instalarPWA(); } },
-    { icon: '🔄', label: t('menu.verificar_atualizacoes'), action: () => { onClose(); alert('Verificando atualizações… reabra o app ou puxe para recarregar.') } },
+    { icon: '🔄', label: t('menu.verificar_atualizacoes'), action: () => { onClose(); onVerificarAtualizacoes(); } },
     { icon: '📤', label: t('menu.compartilhar_app'), action: compartilharApp },
     { icon: '🔒', label: t('menu.politica_privacidade'), action: () => goTo('politica') },
     { icon: '✍️', label: t('menu.configurar_texto'), action: () => { onClose(); setFontModal(true) } },
@@ -1577,6 +1578,21 @@ export default function App() {
     }
   }, [deferredPrompt])
 
+  const forcarSincronizacao = useCallback(async () => {
+    setShowSincBanner(true)
+    setSincOk(false)
+    setSincMsg('Verificando atualizações…')
+    try {
+      const r = await sincronizarCatalogo((pct, msg) => setSincMsg(`${msg} (${pct}%)`))
+      setSincOk(true)
+      setSincMsg(`✅ Atualizado! ${r.total} produtos carregados (v${r.versao})`)
+      setTimeout(() => setShowSincBanner(false), 3000)
+    } catch (e) {
+      setSincMsg('⚠️ Falha de sincronização. Verifique a internet.')
+      setTimeout(() => setShowSincBanner(false), 3000)
+    }
+  }, [])
+
   const ABAS: { id: Tela; icon: string }[] = [
     { id: 'busca', icon: '🔍' }, { id: 'figura', icon: '🚛' },
     { id: 'favoritos', icon: '⭐' }, { id: 'orcamento', icon: '📋' }, { id: 'info', icon: '📰' },
@@ -1608,11 +1624,10 @@ export default function App() {
               body: JSON.stringify({ token_verificacao: dados.token_verificacao })
             })
 
-            if (res.status === 404 || res.status === 403) {
-              console.warn("Cadastro revogado no servidor. Resetando acesso local.");
-              await resetarCadastro()
-              setTela('cadastro')
-            } else if (res.ok) {
+             if (res.status === 404 || res.status === 403) {
+               console.warn("Cadastro revogado ou não localizado no servidor de privacidade. Permitindo acesso com cadastro local offline.");
+               // Mantemos o cadastro local e não forçamos recadastro para evitar incômodos ao cliente
+             } else if (res.ok) {
               const authData = await res.json()
               if (authData && authData.dados && authData.dados.id) {
                 const finalCodigo = String(authData.dados.id).padStart(5, '0');
@@ -1686,7 +1701,7 @@ export default function App() {
         </div>
       )}
 
-      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} navigate={navigate} theme={theme} toggleTheme={toggleTheme} instalarPWA={instalarPWA} />
+      <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} navigate={navigate} theme={theme} toggleTheme={toggleTheme} instalarPWA={instalarPWA} onVerificarAtualizacoes={forcarSincronizacao} />
 
       {/* Conteúdo */}
       <main className="app-content">
