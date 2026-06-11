@@ -628,7 +628,13 @@ function TelaInfo({ onSubnivelChange }: { onSubnivelChange: (sub: boolean) => vo
       const url = `${IMG_BASE}/informativos/${arquivo}`
       const blobUrl = await carregarImagemPrivada(url)
       if (blobUrl) {
-        window.open(blobUrl, '_blank')
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.target = '_blank'
+        link.download = arquivo
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
       } else {
         alert('Não foi possível carregar o arquivo PDF do informativo técnico (erro ao baixar).')
       }
