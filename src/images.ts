@@ -81,7 +81,12 @@ export async function carregarImagemPrivada(url: string): Promise<string> {
     const apiUrl = converterParaApiGitHub(url)
     const resp = await fetch(apiUrl, { headers: AUTH_HEADERS })
     if (!resp.ok) return ''
-    const blob = await resp.blob()
+    let blob = await resp.blob()
+    
+    if (url.toLowerCase().endsWith('.pdf')) {
+      blob = new Blob([blob], { type: 'application/pdf' })
+    }
+    
     const blobUrl = URL.createObjectURL(blob)
     blobCache.set(url, blobUrl)
     return blobUrl
