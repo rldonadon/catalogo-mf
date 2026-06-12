@@ -101,6 +101,30 @@ body {
 .tab-item.ativo { color: var(--cyan); }
 .tab-icon { font-size: 20px; line-height: 1; }
 .tab-label { font-size: 10px; font-weight: 600; }
+.tab-icon-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  border: 1px solid var(--bg);
+  pointer-events: none;
+}
 
 /* ─── Drawer ───────────────────────────────────────────────────────────────── */
 .drawer-overlay {
@@ -359,6 +383,13 @@ body {
 .produto-h1 { font-size: 20px; font-weight: 800; margin-bottom: 8px; line-height: 1.3; }
 .secao { margin-top: 18px; }
 .secao h3 { font-size: 13px; font-weight: 700; color: var(--text-2); margin-bottom: 8px; }
+/* ─── Seção Fiscal (NCM / IPI / ST) ───────────────────────── */
+.secao-fiscal { background: rgba(2, 132, 199, 0.04); border: 1px solid rgba(2, 132, 199, 0.15); border-radius: 10px; padding: 10px 14px; }
+.fiscal-grid { display: flex; flex-direction: column; gap: 6px; }
+.fiscal-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fiscal-label { font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px; min-width: 36px; }
+.fiscal-value { font-size: 13px; font-weight: 600; color: var(--text-1); font-family: 'Courier New', monospace; background: var(--cyan-dim); border-radius: 4px; padding: 2px 8px; }
+
 .refs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .ref-chip { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 12px; font-family: monospace; color: var(--text-2); }
 .aplicacao-item { display: flex; gap: 8px; font-size: 13px; color: var(--text-2); padding: 3px 0; }
@@ -551,7 +582,7 @@ body {
   color: var(--text-1);
 }
 .header-title-code {
-  font-size: 13px;
+  font-size: 26px;
   font-weight: 800;
   color: var(--cyan);
   background: var(--cyan-dim);
@@ -559,6 +590,7 @@ body {
   border-radius: 4px;
   padding: 3px 8px;
   font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
 }
 .header-actions {
   display: flex;

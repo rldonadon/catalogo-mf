@@ -866,6 +866,33 @@ function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate:
           </div>
         )}
 
+        {/* Informações Fiscais: NCM, IPI, ST */}
+        {(produto.ncm || produto.ipi || produto.st) && (
+          <div className="secao secao-fiscal">
+            <h3>📋 Informações Fiscais</h3>
+            <div className="fiscal-grid">
+              {produto.ncm && (
+                <div className="fiscal-row">
+                  <span className="fiscal-label">NCM</span>
+                  <span className="fiscal-value">{produto.ncm}</span>
+                </div>
+              )}
+              {produto.ipi && (
+                <div className="fiscal-row">
+                  <span className="fiscal-label">IPI</span>
+                  <span className="fiscal-value">{produto.ipi}</span>
+                </div>
+              )}
+              {produto.st && (
+                <div className="fiscal-row">
+                  <span className="fiscal-label">ST</span>
+                  <span className="fiscal-value">{produto.st}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {relacionados.length > 0 && (
           <div className="secao">
             <h3>⛓️ Relacionados</h3>
@@ -1602,6 +1629,7 @@ export default function App() {
   const ABAS: { id: Tela; icon: string }[] = [
     { id: 'busca', icon: '🔍' }, { id: 'figura', icon: '🚛' },
     { id: 'favoritos', icon: '⭐' }, { id: 'orcamento', icon: '📋' }, { id: 'info', icon: '📰' },
+    { id: 'lancamentos', icon: '🚀' },
   ]
 
   const navigate = useCallback((t: Tela, param?: string) => {
@@ -1731,7 +1759,12 @@ export default function App() {
         <nav className="tab-bar">
           {ABAS.map(a => (
             <button key={a.id} className={`tab-item${tela===a.id?' ativo':''}`} onClick={() => setTela(a.id)}>
-              <span className="tab-icon">{a.icon}</span>
+              <span className="tab-icon-wrapper">
+                <span className="tab-icon">{a.icon}</span>
+                {a.id === 'lancamentos' && (
+                  <span className="tab-badge" aria-label="Novo">•</span>
+                )}
+              </span>
               <span className="tab-label">{t(`tab.${a.id === 'figura' ? 'figura' : a.id === 'info' ? 'info' : a.id}`)}</span>
             </button>
           ))}

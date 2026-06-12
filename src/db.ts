@@ -5,6 +5,7 @@ export interface Produto {
   codigo: string; nome: string; descricao: string; referencia: string
   aplicacao: string; grupo: string; subgrupo: string
   referencias_busca: string; tags_busca: string; data_lancamento: string
+  ncm?: string; ipi?: string; st?: string
 }
 export interface Meta { chave: string; valor: string }
 export interface Favorito { codigo: string; adicionado_em: string }
@@ -34,7 +35,7 @@ class CatalogoDB extends Dexie {
 
   constructor() {
     super('CatalogoDB')
-    this.version(3).stores({
+    this.version(4).stores({
       produtos: 'codigo, nome, grupo, subgrupo, data_lancamento',
       meta: 'chave',
       favoritos: 'codigo',
