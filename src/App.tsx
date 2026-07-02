@@ -850,8 +850,13 @@ function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate:
           <div className="secao">
             <h3>🔄 Referências Cruzadas</h3>
             <div className="refs-chips">
-              {produto.referencias_busca.split(/[,;|\n]/).filter(Boolean).map(r => (
-                <span key={r} className="ref-chip">{r.trim()}</span>
+              {produto.referencias_busca.split(/[,;|\n|]/).map(r => r.trim()).filter(r => {
+                if (!r) return false;
+                const isQuinelato = r.toUpperCase().startsWith('QA');
+                const isFarj = /^\d{5}-\d+/.test(r);
+                return !isQuinelato && !isFarj;
+              }).map(r => (
+                <span key={r} className="ref-chip">{r}</span>
               ))}
             </div>
           </div>
