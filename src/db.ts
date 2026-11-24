@@ -5,6 +5,7 @@ export interface Produto {
   codigo: string; nome: string; descricao: string; referencia: string
   aplicacao: string; grupo: string; subgrupo: string
   referencias_busca: string; tags_busca: string; data_lancamento: string
+  codigo_barras?: string
   ncm?: string; ipi?: string; st?: string
 }
 export interface Meta { chave: string; valor: string }
@@ -117,12 +118,31 @@ export async function buscarProdutos(termo: string): Promise<Produto[]> {
   const tokens = q.split(' ').filter(t => t.length > 1)
   if (!tokens.length) return []
 
-  return db.produtos.filter(p => {
+  const resultados = await db.produtos.filter(p => {
     const campos = normalizar(
-      `${p.codigo} ${p.nome} ${p.descricao} ${p.referencias_busca} ${p.tags_busca} ${p.aplicacao}`
+      `${p.codigo} ${p.codigo_barras ?? ''} ${p.nome} ${p.descricao} ${p.referencia} ${p.referencias_busca} ${p.tags_busca} ${p.aplicacao}`
     )
     return tokens.every(tk => campos.includes(tk))
-  }).limit(60).toArray()
+  }).toArray()
+
+  // Correspondências diretas de código e código de barras aparecem primeiro,
+  // seguidas por códigos iniciados pelo termo e depois pela relevância textual.
+  const termoNormalizado = normalizar(termo)
+  const digitos = termo.replace(/\D/g, '')
+  return resultados
+    .map((produto, indice) => {
+      const codigo = normalizar(produto.codigo)
+      const barras = (produto.codigo_barras ?? '').replace(/\D/g, '')
+      const prioridade = codigo === termoNormalizado || (digitos && barras === digitos)
+        ? 0
+        : codigo.startsWith(termoNormalizado) || (digitos && barras.startsWith(digitos))
+          ? 1
+          : indice + 2
+      return { produto, prioridade }
+    })
+    .sort((a, b) => a.prioridade - b.prioridade || a.produto.codigo.localeCompare(b.produto.codigo, 'pt-BR'))
+    .slice(0, 60)
+    .map(r => r.produto)
 }
 
 function normalizar(s: string): string {

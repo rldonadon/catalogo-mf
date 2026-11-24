@@ -6,6 +6,9 @@ export const GITHUB_IMG_REPO  = 'rldonadon/Catalogo_Imagens_MF'
 // URL base do repositório de imagens
 export const IMG_BASE = `https://raw.githubusercontent.com/${GITHUB_IMG_REPO}/main`
 
+// Catálogo impresso em PDF (arquivo fixo na release "catalogo-pdf")
+export const PDF_CATALOGO_URL = 'https://github.com/rldonadon/Catalogo_Digital_MF_Freios/releases/download/catalogo-pdf/catalogo_mf.pdf'
+
 // Catálogo de dados (JSON publicado pelo MRP)
 export const CATALOGO_JSON_URL = 'https://raw.githubusercontent.com/rldonadon/catalogo-mf/main/public/catalogo.json'
 

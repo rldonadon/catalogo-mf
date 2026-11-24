@@ -5,7 +5,8 @@ import { db, buscarProdutos, sincronizarCatalogo, precisaAtualizar,
 import { jsPDF } from 'jspdf'
 import { carregarImagemPrivada, buscarImagensProduto, buscarImagemFigura } from './images'
 import { t, getIdioma, setIdioma, type Idioma } from './i18n'
-import { WHATSAPP_NUMS, TELEFONES, EMAILS_CONTATO, ENDERECO, SISTEMAS_FIGURA, WEBHOOK_URL, IMG_BASE } from './config'
+import { WHATSAPP_NUMS, TELEFONES, EMAILS_CONTATO, ENDERECO, SISTEMAS_FIGURA, WEBHOOK_URL, IMG_BASE, PDF_CATALOGO_URL } from './config'
+import { calcularRelacionados, REL_TITULOS, type RelItem, type RelTipo } from './relacionados'
 
 const BASE_LOGO = `${import.meta.env.BASE_URL}logo.png`
 const BASE_BANNER = `${import.meta.env.BASE_URL}caminhao_banner.png`
@@ -84,6 +85,7 @@ function TelaBusca({ navigate, instalarPWA }: { navigate: (t: Tela, p?: string) 
   const [marcas, setMarcas] = useState<string[]>([])
   const [grupos, setGrupos] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [ordenacao, setOrdenacao] = useState<'relevancia' | 'nome' | 'codigo'>('relevancia')
   const [showInstallBanner, setShowInstallBanner] = useState(false)
 
   useEffect(() => {
@@ -98,6 +100,14 @@ function TelaBusca({ navigate, instalarPWA }: { navigate: (t: Tela, p?: string) 
     setShowInstallBanner(false)
   }
   const debounce = useRef<ReturnType<typeof setTimeout>>()
+  const produtosOrdenados = useMemo(() => {
+    if (ordenacao === 'relevancia') return produtos
+    return [...produtos].sort((a, b) =>
+      (ordenacao === 'nome' ? a.nome : a.codigo).localeCompare(
+        ordenacao === 'nome' ? b.nome : b.codigo, 'pt-BR', { numeric: true, sensitivity: 'base' }
+      )
+    )
+  }, [produtos, ordenacao])
 
   useEffect(() => {
     db.produtos.orderBy('subgrupo').uniqueKeys().then(k => setMarcas(k.map(String)))
@@ -179,8 +189,17 @@ function TelaBusca({ navigate, instalarPWA }: { navigate: (t: Tela, p?: string) 
 
           {!loading && produtos.length > 0 && (
             <div className="lista">
-              <div className="lista-count">{produtos.length} resultado{produtos.length !== 1 ? 's' : ''}</div>
-              {produtos.map(p => <ProdutoCard key={p.codigo} p={p} onClick={() => navigate('produto', p.codigo)} />)}
+              <div className="lista-toolbar">
+                <div className="lista-count">{produtos.length} resultado{produtos.length !== 1 ? 's' : ''}</div>
+                <label className="ordenacao-label">Ordenar por
+                  <select value={ordenacao} onChange={e => setOrdenacao(e.target.value as typeof ordenacao)}>
+                    <option value="relevancia">Relevância</option>
+                    <option value="nome">Nome</option>
+                    <option value="codigo">Código</option>
+                  </select>
+                </label>
+              </div>
+              {produtosOrdenados.map(p => <ProdutoCard key={p.codigo} p={p} onClick={() => navigate('produto', p.codigo)} />)}
             </div>
           )}
 
@@ -754,6 +773,7 @@ function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate:
   const [modalQty, setModalQty] = useState(false)
   const [quantidade, setQty] = useState(1)
   const [relacionados, setRelacionados] = useState<Produto[]>([])
+  const [kits, setKits] = useState<RelItem[]>([])
   const [loadingImgs, setLoadingImgs] = useState(true)
   const [zoomImg, setZoomImg] = useState('')
 
@@ -762,6 +782,7 @@ function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate:
       if (!p) return
       setProduto(p)
       db.favoritos.get(p.codigo).then(f => setIsFav(!!f))
+      db.produtos.toArray().then(todos => setKits(calcularRelacionados(p, todos, 16))).catch(() => setKits([]))
       db.produtos.where('grupo').equalsIgnoreCase(p.grupo).limit(10).toArray()
         .then(r => setRelacionados(r.filter(x => x.codigo !== p.codigo)))
       buscarImagensProduto(p.codigo).then(async urls => {
@@ -898,7 +919,31 @@ function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate:
           </div>
         )}
 
-        {relacionados.length > 0 && (
+        {kits.length > 0 && (
+          <div className="secao">
+            <h3>🧰 Kits e produtos relacionados</h3>
+            {(['COMPLETO', 'PARCIAL', 'CRUZADO', 'COMPONENTE'] as RelTipo[]).map(tipo => {
+              const itens = kits.filter(k => k.tipo === tipo)
+              if (itens.length === 0) return null
+              return (
+                <div key={tipo} className={`kit-grupo kit-${tipo.toLowerCase()}`}>
+                  <div className="kit-titulo">{REL_TITULOS[tipo]} <em>{itens.length}</em></div>
+                  <div className="relacionados-scroll">
+                    {itens.map(({ produto: r }) => (
+                      <div key={r.codigo} className="rel-card" onClick={() => navigate('produto', r.codigo)} role="button">
+                        <ImagemProduto codigo={r.codigo} size={50} />
+                        <span className="rel-codigo">{r.codigo}</span>
+                        <span className="rel-nome">{r.nome}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {kits.length === 0 && relacionados.length > 0 && (
           <div className="secao">
             <h3>⛓️ Relacionados</h3>
             <div className="relacionados-scroll">
@@ -1295,7 +1340,7 @@ function TelaSobre({ onVoltar }: { onVoltar: () => void }) {
       <div className="sobre-logo-card">
         <img src={BASE_LOGO} alt="MF Logo" className="sobre-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
         <strong>MF SISTEMAS AUTOMOTIVOS</strong>
-        <span>Catálogo Digital • Versão 7.0.0</span>
+        <span>Catálogo Digital • Versão 7.1.0</span>
       </div>
       <div className="sobre-card"><h3>🏢 A Nossa Empresa</h3><p>MF Freios é referência em reposição de autopeças para linha pesada — caminhões, ônibus, carretas e cavalos mecânicos. Especializada em freios a ar para Mercedes-Benz, Scania, Volvo, Ford, Volkswagen e Iveco.</p></div>
       <div className="sobre-card"><h3>✨ Nossos Diferenciais</h3>
@@ -1501,6 +1546,7 @@ function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA, on
     { icon: '🏢', label: t('menu.sobre_quinelato'), action: () => goTo('sobre') },
     { icon: '🌓', label: theme === 'dark' ? 'Tema Claro' : 'Tema Escuro', action: () => { onClose(); toggleTheme(); } },
     { icon: '📥', label: 'Instalar Aplicativo', action: () => { onClose(); instalarPWA(); } },
+    { icon: '📖', label: 'Catálogo em PDF', action: () => { onClose(); window.open(PDF_CATALOGO_URL, '_blank', 'noopener'); } },
     { icon: '🔄', label: t('menu.verificar_atualizacoes'), action: () => { onClose(); onVerificarAtualizacoes(); } },
     { icon: '📤', label: t('menu.compartilhar_app'), action: compartilharApp },
     { icon: '🔒', label: t('menu.politica_privacidade'), action: () => goTo('politica') },
@@ -1530,7 +1576,7 @@ function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA, on
         </div>
         <div className="drawer-footer">
           <span>MF Freios © 2026</span>
-          <span>Versão 7.0.0</span>
+          <span>Versão 7.1.0</span>
         </div>
       </div>
 
