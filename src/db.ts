@@ -28,11 +28,16 @@ export interface Informativo {
   imagem: string | null;
 }
 
+export interface RelacaoCatalogo {
+  codigo_origem: string; codigo_relacionado: string; tipo: string
+}
+
 class CatalogoDB extends Dexie {
   produtos!: Table<Produto>; meta!: Table<Meta>
   favoritos!: Table<Favorito>; orcamento!: Table<ItemOrcamento>
   cadastro!: Table<Cadastro & { id?: number }>
   informativos!: Table<Informativo>
+  relacoes!: Table<RelacaoCatalogo>
 
   constructor() {
     super('CatalogoDB')
@@ -43,6 +48,15 @@ class CatalogoDB extends Dexie {
       orcamento: '++id, codigo',
       cadastro: '++id',
       informativos: 'id, numero, destaque',
+    })
+    this.version(5).stores({
+      produtos: 'codigo, nome, grupo, subgrupo, data_lancamento',
+      meta: 'chave',
+      favoritos: 'codigo',
+      orcamento: '++id, codigo',
+      cadastro: '++id',
+      informativos: 'id, numero, destaque',
+      relacoes: '[codigo_origem+codigo_relacionado], codigo_origem',
     })
   }
 }
@@ -75,15 +89,17 @@ export async function sincronizarCatalogo(
 
   onProgress?.(50, 'Baixando catálogo…')
   const data = await resp.json()
-  const { meta = [], produtos = [], informativos = [] } = data
+  const { meta = [], produtos = [], informativos = [], relacoes = [] } = data
 
   onProgress?.(80, 'Salvando offline…')
-  await db.transaction('rw', db.produtos, db.meta, db.informativos, async () => {
+  await db.transaction('rw', db.produtos, db.meta, db.informativos, db.relacoes, async () => {
     await db.produtos.clear()
     await db.meta.clear()
     await db.informativos.clear()
+    await db.relacoes.clear()
     await db.produtos.bulkAdd(produtos)
     await db.informativos.bulkAdd(informativos)
+    if (relacoes.length) await db.relacoes.bulkAdd(relacoes)
     for (const m of meta) await db.meta.put(m)
   })
 
@@ -104,7 +120,15 @@ export async function precisaAtualizar(): Promise<boolean> {
     const localMeta = await db.meta.get('versao')
     const versaoLocal = localMeta?.valor
     
-    return !!versaoRemota && versaoRemota !== versaoLocal
+    if (!!versaoRemota && versaoRemota !== versaoLocal) return true
+
+    // A versão dos dados raramente muda; a data de publicação muda a cada envio.
+    const publicadoRemoto = data.meta?.find((m: any) => m.chave === 'pwa_atualizado')?.valor
+    const publicadoLocal = (await db.meta.get('pwa_atualizado'))?.valor
+    if (!!publicadoRemoto && publicadoRemoto !== publicadoLocal) return true
+
+    // Base baixada antes da tabela de relações existir no app.
+    return (data.relacoes?.length ?? 0) > 0 && (await db.relacoes.count()) === 0
   } catch (e) {
     console.warn("Erro ao verificar atualizações automáticas:", e)
     return false

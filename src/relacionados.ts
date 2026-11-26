@@ -57,6 +57,41 @@ const familia = (t: string) => {
 const ehKit = (p: ProdRel) => /(^|\s)JG(\s|$)|\bREPARO\b|\bREP\b/.test((p.nome || "").toUpperCase());
 const ehParcial = (p: ProdRel) => /PARCIAL/.test((p.nome || "").toUpperCase());
 
+// Ligação curada no ERP (aba "relacoes" da planilha mestre, tabela `relacoes` do catalogo.db).
+// `tipo` vem como COMPLETO | PARCIAL | SIMILAR; SIMILAR é exibido como CRUZADO.
+export interface RelacaoTabela {
+  codigo_origem: string;
+  codigo_relacionado: string;
+  tipo: string;
+}
+
+export function calcularRelacionadosTabela(
+  sel: ProdRel, todos: ProdRel[], relacoes: RelacaoTabela[], limite = 16
+): RelItem[] {
+  const porCodigo = new Map(todos.map(p => [p.codigo, p]));
+  const resultado: RelItem[] = [];
+  for (const r of relacoes) {
+    if (r.codigo_origem !== sel.codigo) continue;
+    const produto = porCodigo.get(r.codigo_relacionado);
+    if (!produto) continue;
+    const tipo: RelTipo =
+      r.tipo === "COMPLETO" ? "COMPLETO" : r.tipo === "PARCIAL" ? "PARCIAL" : "CRUZADO";
+    resultado.push({ produto, tipo, via: "cadastrado no ERP" });
+  }
+  resultado.sort((a, b) =>
+    ORDEM.indexOf(a.tipo) - ORDEM.indexOf(b.tipo) || a.produto.codigo.localeCompare(b.produto.codigo));
+  return resultado.slice(0, limite);
+}
+
+// Regra única para os apps: se a tabela de relações foi importada, ela é a fonte
+// oficial (sem heurística). Só cai na heurística antiga quando não há nenhuma relação cadastrada.
+export function relacionadosDoCatalogo(
+  sel: ProdRel, todos: ProdRel[], relacoes: RelacaoTabela[], limite = 16
+): RelItem[] {
+  if (relacoes.length > 0) return calcularRelacionadosTabela(sel, todos, relacoes, limite);
+  return calcularRelacionados(sel, todos, limite);
+}
+
 export function calcularRelacionados(sel: ProdRel, todos: ProdRel[], limite = 16): RelItem[] {
   const tSel = tokens(sel);
   if (tSel.length === 0) return [];

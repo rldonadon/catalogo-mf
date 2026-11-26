@@ -6,7 +6,7 @@ import { jsPDF } from 'jspdf'
 import { carregarImagemPrivada, buscarImagensProduto, buscarImagemFigura } from './images'
 import { t, getIdioma, setIdioma, type Idioma } from './i18n'
 import { WHATSAPP_NUMS, TELEFONES, EMAILS_CONTATO, ENDERECO, SISTEMAS_FIGURA, WEBHOOK_URL, IMG_BASE, PDF_CATALOGO_URL } from './config'
-import { calcularRelacionados, REL_TITULOS, type RelItem, type RelTipo } from './relacionados'
+import { relacionadosDoCatalogo, REL_TITULOS, type RelItem, type RelTipo } from './relacionados'
 
 const BASE_LOGO = `${import.meta.env.BASE_URL}logo.png`
 const BASE_BANNER = `${import.meta.env.BASE_URL}caminhao_banner.png`
@@ -782,7 +782,9 @@ function TelaProduto({ codigo, navigate, onVoltar }: { codigo: string; navigate:
       if (!p) return
       setProduto(p)
       db.favoritos.get(p.codigo).then(f => setIsFav(!!f))
-      db.produtos.toArray().then(todos => setKits(calcularRelacionados(p, todos, 16))).catch(() => setKits([]))
+      Promise.all([db.produtos.toArray(), db.relacoes.toArray().catch(() => [])])
+        .then(([todos, rels]) => setKits(relacionadosDoCatalogo(p, todos, rels, 16)))
+        .catch(() => setKits([]))
       db.produtos.where('grupo').equalsIgnoreCase(p.grupo).limit(10).toArray()
         .then(r => setRelacionados(r.filter(x => x.codigo !== p.codigo)))
       buscarImagensProduto(p.codigo).then(async urls => {
@@ -1340,7 +1342,7 @@ function TelaSobre({ onVoltar }: { onVoltar: () => void }) {
       <div className="sobre-logo-card">
         <img src={BASE_LOGO} alt="MF Logo" className="sobre-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
         <strong>MF SISTEMAS AUTOMOTIVOS</strong>
-        <span>Catálogo Digital • Versão 7.1.0</span>
+        <span>Catálogo Digital • Versão 7.2.0</span>
       </div>
       <div className="sobre-card"><h3>🏢 A Nossa Empresa</h3><p>MF Freios é referência em reposição de autopeças para linha pesada — caminhões, ônibus, carretas e cavalos mecânicos. Especializada em freios a ar para Mercedes-Benz, Scania, Volvo, Ford, Volkswagen e Iveco.</p></div>
       <div className="sobre-card"><h3>✨ Nossos Diferenciais</h3>
@@ -1576,7 +1578,7 @@ function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA, on
         </div>
         <div className="drawer-footer">
           <span>MF Freios © 2026</span>
-          <span>Versão 7.1.0</span>
+          <span>Versão 7.2.0</span>
         </div>
       </div>
 
