@@ -1342,7 +1342,7 @@ function TelaSobre({ onVoltar }: { onVoltar: () => void }) {
       <div className="sobre-logo-card">
         <img src={BASE_LOGO} alt="MF Logo" className="sobre-logo" onError={e => { (e.target as HTMLImageElement).style.display='none' }} />
         <strong>MF SISTEMAS AUTOMOTIVOS</strong>
-        <span>Catálogo Digital • Versão 7.2.0</span>
+        <span>Catálogo Digital • Versão 7.3.0</span>
       </div>
       <div className="sobre-card"><h3>🏢 A Nossa Empresa</h3><p>MF Freios é referência em reposição de autopeças para linha pesada — caminhões, ônibus, carretas e cavalos mecânicos. Especializada em freios a ar para Mercedes-Benz, Scania, Volvo, Ford, Volkswagen e Iveco.</p></div>
       <div className="sobre-card"><h3>✨ Nossos Diferenciais</h3>
@@ -1578,7 +1578,7 @@ function Drawer({ isOpen, onClose, navigate, theme, toggleTheme, instalarPWA, on
         </div>
         <div className="drawer-footer">
           <span>MF Freios © 2026</span>
-          <span>Versão 7.2.0</span>
+          <span>Versão 7.3.0</span>
         </div>
       </div>
 

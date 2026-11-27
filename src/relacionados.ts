@@ -28,7 +28,7 @@ export interface RelItem {
 export const REL_TITULOS: Record<RelTipo, string> = {
   COMPLETO: "Kit de reparo completo",
   PARCIAL: "Kit de reparo parcial",
-  CRUZADO: "Cruzados / equivalentes",
+  CRUZADO: "Relacionados",
   COMPONENTE: "Peças do mesmo conjunto",
 };
 
@@ -65,6 +65,16 @@ export interface RelacaoTabela {
   tipo: string;
 }
 
+// Na tabela, `tipo` descreve o kit da PRÓPRIA linha (codigo_origem), não o relacionado.
+// Para rotular o relacionado usa o tipo declarado na linha dele; sem ela, o oposto.
+function tipoDoRelacionado(r: RelacaoTabela, relacoes: RelacaoTabela[]): RelTipo {
+  if (r.tipo !== "COMPLETO" && r.tipo !== "PARCIAL") return "CRUZADO";
+  const proprio = relacoes.find(x =>
+    x.codigo_origem === r.codigo_relacionado && (x.tipo === "COMPLETO" || x.tipo === "PARCIAL"));
+  if (proprio) return proprio.tipo as RelTipo;
+  return r.tipo === "COMPLETO" ? "PARCIAL" : "COMPLETO";
+}
+
 export function calcularRelacionadosTabela(
   sel: ProdRel, todos: ProdRel[], relacoes: RelacaoTabela[], limite = 16
 ): RelItem[] {
@@ -74,22 +84,28 @@ export function calcularRelacionadosTabela(
     if (r.codigo_origem !== sel.codigo) continue;
     const produto = porCodigo.get(r.codigo_relacionado);
     if (!produto) continue;
-    const tipo: RelTipo =
-      r.tipo === "COMPLETO" ? "COMPLETO" : r.tipo === "PARCIAL" ? "PARCIAL" : "CRUZADO";
-    resultado.push({ produto, tipo, via: "cadastrado no ERP" });
+    resultado.push({ produto, tipo: tipoDoRelacionado(r, relacoes), via: "cadastrado no ERP" });
   }
   resultado.sort((a, b) =>
     ORDEM.indexOf(a.tipo) - ORDEM.indexOf(b.tipo) || a.produto.codigo.localeCompare(b.produto.codigo));
   return resultado.slice(0, limite);
 }
 
-// Regra única para os apps: se a tabela de relações foi importada, ela é a fonte
-// oficial (sem heurística). Só cai na heurística antiga quando não há nenhuma relação cadastrada.
+// Regra única para os apps: kit completo/parcial vem somente da tabela curada no ERP.
+// Os demais itens com referência em comum aparecem como relacionados (ou peças do conjunto).
+// Sem nenhuma relação cadastrada, mantém a regra antiga por referência.
 export function relacionadosDoCatalogo(
   sel: ProdRel, todos: ProdRel[], relacoes: RelacaoTabela[], limite = 16
 ): RelItem[] {
-  if (relacoes.length > 0) return calcularRelacionadosTabela(sel, todos, relacoes, limite);
-  return calcularRelacionados(sel, todos, limite);
+  if (relacoes.length === 0) return calcularRelacionados(sel, todos, limite);
+  const daTabela = calcularRelacionadosTabela(sel, todos, relacoes, limite);
+  const jaListados = new Set(daTabela.map(x => x.produto.codigo));
+  const outros = calcularRelacionados(sel, todos, todos.length)
+    .filter(x => !jaListados.has(x.produto.codigo))
+    .map((x): RelItem => (x.tipo === "COMPONENTE" ? x : { ...x, tipo: "CRUZADO" }))
+    .sort((a, b) =>
+      ORDEM.indexOf(a.tipo) - ORDEM.indexOf(b.tipo) || a.produto.codigo.localeCompare(b.produto.codigo));
+  return [...daTabela, ...outros].slice(0, limite);
 }
 
 export function calcularRelacionados(sel: ProdRel, todos: ProdRel[], limite = 16): RelItem[] {
